@@ -1,0 +1,2 @@
+g++ -I/Users/pennyhancock/R-3.1.0/R-x86_64/src/include -L/Users/pennyhancock/R-3.1.0/R-x86_64/src/nmath/standalone gyp_sim.cpp -o gyp_sim.exe -lRmath -lm -lgsl -lgslcblas -lm
+

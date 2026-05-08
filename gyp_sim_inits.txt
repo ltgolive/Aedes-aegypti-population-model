@@ -1,0 +1,16 @@
+Cohort_means.txt
+Cohort_means_wolb.txt
+Cohort_stds.txt
+Cohort_stds_wolb.txt
+mu_p.txt
+L_file.txt
+A_file.txt
+mu_p_wolb.txt
+L_wolb_file.txt
+A_wolb_file.txt
+FreqA2_file.txt
+lambda.txt
+release_size.txt
+700
+0.07
+0.01
