@@ -13,7 +13,6 @@
 #include <float.h>
 #include <stdio.h>
 #include <string>
-#include <sstream>
 #include <iomanip>
 
 using namespace std;
@@ -26,7 +25,7 @@ typedef vector<Row_Double> Matrix_Double;
 
 //some of these vectors that are getting passed around could just be global...
 void read_data(ofstream& cohort_means_out, ofstream& cohort_means_wolb_out, ofstream& cohort_stds_out, ofstream& cohort_stds_wolb_out, ofstream& mu_p_out,ofstream& mu_p_wolb_out, ofstream& L_out, ofstream& L_wolb_out, ofstream& A_out, ofstream& A_wolb_out, ofstream& freqA2_out, ofstream& lambda_out, ifstream& rel_siz_in);
-double Run_Model(const vector<int> max_dt, ofstream& mu_p_out,  ofstream& freqA2_out, ofstream& lambda_out);
+double Run_Model(ofstream& mu_p_out,  ofstream& freqA2_out, ofstream& lambda_out);
 
 const int no_cohorts =1000;
 const int no_pdays = 170;
@@ -38,8 +37,6 @@ vector<float> mean_dt(no_cohorts), mean_dt_wolb(no_cohorts), std_dt(no_cohorts),
 Matrix_Double P(maxtime, Row_Double(3)), P_wolb(maxtime, Row_Double(3));
 
 vector<int> pupae(no_pdays),pdate(no_pdays),hatch(no_cohorts),hdate(no_cohorts),larvae_sampled(no_cohorts), pupae_sampled(no_pdays);
-
-stringstream strstm;
 
 int release_day;
 double release_size, DI_cost, DI_L_cost;
@@ -54,13 +51,8 @@ ifstream rel_siz_in;
 
 read_data(cohort_means_out,cohort_means_wolb_out, cohort_stds_out, cohort_stds_wolb_out, mu_p_out, mu_p_wolb_out, L_out, L_wolb_out, A_out, A_wolb_out, freqA2_out, lambda_out, rel_siz_in);
 
-//Assign Cohorts to blocks and maximum development time
-vector<int> max_dt(no_cohorts);
-for (int i=0; i<no_cohorts; i++){
-	max_dt.at(i) = maxtime - hdate.at(i);
-}
 
-Run_Model(max_dt, mu_p_out, freqA2_out, lambda_out);
+Run_Model(mu_p_out, freqA2_out, lambda_out);
 
 for (int j=0; j<no_cohorts; j++) {
 	cohort_means_out << mean_dt.at(j) << " ";
@@ -88,7 +80,8 @@ for (int j=0; j<maxtime; j++) {
 }
 L_out << endl;
 A_out << endl;
-
+L_wolb_out << endl;
+A_wolb_out << endl;
 
 return 0;
 
@@ -109,83 +102,22 @@ string cohort_means_file,cohort_means_wolb_file, cohort_stds_file, cohort_stds_w
 cin >> cohort_means_file >> cohort_means_wolb_file >> cohort_stds_file >> cohort_stds_wolb_file  >> mu_p_file >> L_file >> A_file >> mu_p_wolb_file >> L_wolb_file>> A_wolb_file >>  freqA2_file >>lambda_file >> rel_siz_file;
 cout <<   " cohort_means_file " << cohort_means_file<< " cohort_means_wolb_file " << cohort_means_wolb_file << " cohort_stds_file " << cohort_stds_file << " cohort_stds_wolb_file " << cohort_stds_wolb_file <<  " mu_p_file " << mu_p_file << " L_file " << L_file << " A_file "<<  A_file  << " mu_p_wolb_file " << mu_p_wolb_file << " L_wolb_file " << L_wolb_file << " A_wolb_file " << A_wolb_file << " release_siz_file " << rel_siz_file << " freqA2_file " << freqA2_file << " lambda_file " << lambda_file << endl;
 
-strstm.clear();
-strstm.str("");
-strstm <<cohort_means_file;
-string filename4=strstm.str();
-cohort_means_out.open(filename4.c_str());
+// Output files
+cohort_means_out.open(cohort_means_file);
+cohort_stds_out.open(cohort_stds_file);
+mu_p_out.open(mu_p_file);
+L_out.open(L_file);
+A_out.open(A_file);
+mu_p_wolb_out.open(mu_p_wolb_file);
+L_wolb_out.open(L_wolb_file);
+A_wolb_out.open(A_wolb_file);
+cohort_means_wolb_out.open(cohort_means_wolb_file);
+cohort_stds_wolb_out.open(cohort_stds_wolb_file);
+freqA2_out.open(freqA2_file);
+lambda_out.open(lambda_file);
 
-strstm.clear();
-strstm.str("");
-strstm <<cohort_stds_file;
-string filename5=strstm.str();
-cohort_stds_out.open(filename5.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<mu_p_file;
-string filename10=strstm.str();
-mu_p_out.open(filename10.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<L_file;
-string filename11=strstm.str();
-L_out.open(filename11.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<A_file;
-string filename17=strstm.str();
-A_out.open(filename17.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<mu_p_wolb_file;
-string filename18=strstm.str();
-mu_p_wolb_out.open(filename18.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<L_wolb_file;
-string filename19=strstm.str();
-L_wolb_out.open(filename19.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<A_wolb_file;
-string filename20=strstm.str();
-A_wolb_out.open(filename20.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<cohort_means_wolb_file;
-string filename21=strstm.str();
-cohort_means_wolb_out.open(filename21.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<cohort_stds_wolb_file;
-string filename22=strstm.str();
-cohort_stds_wolb_out.open(filename22.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<rel_siz_file;
-string filename24=strstm.str();
-rel_siz_in.open(filename24.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<freqA2_file;
-string filename25=strstm.str();
-freqA2_out.open(filename25.c_str());
-
-strstm.clear();
-strstm.str("");
-strstm <<lambda_file;
-string filename26=strstm.str();
-lambda_out.open(filename26.c_str());
+// Input files
+rel_siz_in.open(rel_siz_file);
 
 cin >> release_day;
 rel_siz_in >> release_size;
@@ -197,7 +129,7 @@ cout << "DI_L_cost " << DI_L_cost << " (additional density-INdependent daily mor
 }
 
 //---------------------------------function "Run_Model"----------------------------------------
-double Run_Model(const vector<int> max_dt, ofstream& mu_p_out, ofstream& freqA2_out, ofstream& lambda_out){
+double Run_Model(ofstream& mu_p_out, ofstream& freqA2_out, ofstream& lambda_out){
 
 vector<double>  non_emerg_prob(no_cohorts), non_emerg_prob_wolb(no_cohorts), L_avg_cohort(no_cohorts), hatch_sim(no_cohorts), hatch_sim_wolb(no_cohorts), A_wolb_imm(maxtime), A_ovipos_wolb_imm(maxtime), mn_dt_gam(no_cohorts), mn_dt_wolb_gam(no_cohorts), std_dt_gam(no_cohorts), std_dt_wolb_gam(no_cohorts),no_emerg_tot(no_cohorts), no_emerg_tot_wolb(no_cohorts), L_avg(no_cohorts), lambda(no_cohorts), lambda_wolb(no_cohorts);
 vector<int> emerg_flag(no_cohorts);
@@ -206,8 +138,8 @@ Matrix_Double L_cohort(maxtime, Row_Double(no_cohorts));
 Matrix_Double L_cohort_wolb(maxtime, Row_Double(no_cohorts));
 //Make an array to store the number of individuals from each cohort that emerge as pupae at each time 
 Matrix_Double emerg_record(maxtime, Row_Double(no_cohorts)), emerg_record_wolb(maxtime, Row_Double(no_cohorts));
-double tau_p, surv_L, L_avg1, L_cum2, L_cum, denom2, Dt_shp, Dt_shp_wolb, Dt_scl, Dt_scl_wolb, prob, prob_wolb, no_emerge,no_emerge_wolb, H_cum, av_growth, L_av1, L_av2, L_avg_f, sh, w, freqA, lambda_max, survA_imm, intc_TL, intc_TL_wolb, alpha_TL, alpha_TL_wolb, exp_TL, exp_TL_wolb, a_value, a_value_wolb, b_value, b_value_wolb, b_value2, b_value2_wolb, intc_f, alpha_f, survA, survA_wolb, lambda1, lambda_wolb1, freq_end, lambda_min, mean_max,std_max,std_min, freq_end2, freqL_end,mean_dt1,mean_lambda,mean_std_dt;
-int index,first_hatch_date, max_cohort, L_max, time_lag, count, tlagh, tlagg,tlagi,tlagp, min_cohort, max_dt_int, release_end, release_day_init, dens_lag;
+double surv_L, L_avg1, L_cum2, L_cum, denom2, Dt_shp, Dt_shp_wolb, Dt_scl, Dt_scl_wolb, prob, prob_wolb, no_emerge, no_emerge_wolb, L_avg_f, sh, w, freqA, lambda_max, survA_imm, intc_TL, intc_TL_wolb, alpha_TL, alpha_TL_wolb, exp_TL, exp_TL_wolb, a_value, a_value_wolb, b_value, b_value_wolb, b_value2, b_value2_wolb, intc_f, alpha_f, survA, survA_wolb, lambda1, lambda_wolb1, freq_end, lambda_min, mean_max, std_max, std_min, freqL_end, mean_dt1, mean_lambda, mean_std_dt;
+int index, first_hatch_date, max_cohort, L_max, time_lag, tlagh, tlagg, tlagi, tlagp, min_cohort, max_dt_int, release_end, release_day_init, dens_lag;
 
 first_hatch_date=hdate.at(0);
 tlagh = 5;//lag between oviposition and hatching
@@ -393,12 +325,9 @@ for (int time1=1; time1<maxtime; time1++){
 			denom2 = 0;
 			for (int etime = hdate.at(cohort)+5; etime <=time1; etime++){//all emergence times "etime" past to present
 				L_cum=0;
-				H_cum=0;
-				count=cohort;
 				for (int k=hdate.at(cohort); k<etime; k++) {
 					L_cum += (L.at(k) + L_wolb.at(k));//cumulative exposure experienced at day before emergence time
 				}
-				L_cum-=H_cum;
 				L_cum2 += (emerg_record[etime][cohort] + emerg_record_wolb[etime][cohort])*L_cum/(etime-hdate.at(cohort));//accumulating daily average exposure * no. emerged
 				denom2 += emerg_record[etime][cohort] + emerg_record_wolb[etime][cohort];//cumulative no. emerged
 			}
@@ -411,11 +340,6 @@ for (int time1=1; time1<maxtime; time1++){
 			if (mn_dt_gam.at(cohort)<0) mn_dt_gam.at(cohort)=0;
 			if (mn_dt_wolb_gam.at(cohort)<0) mn_dt_wolb_gam.at(cohort)=0;
 
-			if (denom2>1) {
-				emerg_flag.at(cohort)=1;
-				L_avg_cohort.at(cohort) = L_avg1;
-			}
-
 			std_dt_gam.at(cohort) = a_value + b_value * pow(L_avg1, b_value2);
 			std_dt_wolb_gam.at(cohort) = a_value_wolb + b_value_wolb * pow(L_avg1, b_value2_wolb);
 
@@ -424,6 +348,11 @@ for (int time1=1; time1<maxtime; time1++){
 			if (std_dt_gam.at(cohort) <std_min) std_dt_gam.at(cohort) = std_min;
 			if (std_dt_wolb_gam.at(cohort) <std_min) std_dt_wolb_gam.at(cohort) = std_min;
 			if (L_avg1>L_max) {mn_dt_gam.at(cohort) = mean_max; mn_dt_wolb_gam.at(cohort) = mean_max;std_dt_gam.at(cohort) = std_max;std_dt_wolb_gam.at(cohort) = std_max;}
+
+			if (denom2>1) {
+				emerg_flag.at(cohort)=1;
+				L_avg_cohort.at(cohort) = L_avg1;
+			}
 
 		}//end of if (time1>hdate.at(cohort)+4 && emerg_flag.at(cohort)==0)
 		
@@ -563,8 +492,8 @@ for (int i=0; i<no_cohorts; i++) lambda_out << lambda.at(i) << endl;
 
 for (int i=0; i<maxtime; i++) A_wolb.at(i) += A_wolb_imm.at(i);
 
-freq_end2 = A_wolb.at(release_end)/(A_wolb.at(release_end) + A.at(release_end));
-freqA2_out << freq_end2 << endl;
+freq_end = A_wolb.at(release_end)/(A_wolb.at(release_end) + A.at(release_end));
+freqA2_out << freq_end << endl;
 
 freqL_end = L_wolb.at(release_end)/(L_wolb.at(release_end) + L.at(release_end));
 
