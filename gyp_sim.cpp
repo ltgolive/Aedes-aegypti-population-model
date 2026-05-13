@@ -26,16 +26,17 @@ typedef vector<double> Row_Double;
 typedef vector<Row_Double> Matrix_Double;
 
 // Declare functions - could some of these vectors be globals instead?
-void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& mu_p_out,ofstream& L_out, ofstream& A_out, ofstream& lambda_out);
-double Run_Model(ofstream& mu_p_out, ofstream& lambda_out);
+void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& mu_p_m_out,ofstream& L_m_out, ofstream& A_m_out, ofstream& mu_p_f_out,ofstream& L_f_out, ofstream& A_f_out, ofstream& lambda_out);
+double Run_Model(ofstream& mu_p_m_out, ofstream& mu_p_f_out, ofstream& lambda_out);
 
 // Globals
 const int no_cohorts = 1000; // number of mosquito cohorts
 const int maxtime = 2500; // simulation length (days; ~7 years)
 
 // Declare data containers
-vector<float> mean_dt(no_cohorts), std_dt(no_cohorts), mu_p(maxtime), L(maxtime), A(maxtime), A_ovipos(maxtime);
-Matrix_Double P(maxtime, Row_Double(3)), P_wolb(maxtime, Row_Double(3));
+vector<float> mean_dt(no_cohorts), std_dt(no_cohorts), A_ovipos(maxtime);
+vector<double> mu_p_m(maxtime), L_m(maxtime), A_m(maxtime), mu_p_f(maxtime), L_f(maxtime), A_f(maxtime);
+Matrix_Double P_m(maxtime, Row_Double(3)), P_f(maxtime, Row_Double(3));
 vector<int> hdate(no_cohorts);
 
 // Declare variables
@@ -46,13 +47,13 @@ double DI_cost, DI_L_cost;
 int main(){
 
 // Declare input and output files
-ofstream cohort_means_out, cohort_stds_out, mu_p_out, L_out, A_out, lambda_out;
+ofstream cohort_means_out, cohort_stds_out, mu_p_m_out, L_m_out, A_m_out, mu_p_f_out, L_f_out, A_f_out, lambda_out;
 
 // Calls function: read_data
-read_data(cohort_means_out, cohort_stds_out, mu_p_out, L_out, A_out, lambda_out);
+read_data(cohort_means_out, cohort_stds_out, mu_p_m_out, L_m_out, A_m_out, mu_p_f_out, L_f_out, A_f_out, lambda_out);
 
 // Calls function: Run_Model - calls in output file streams that need to be written to during the simulation rather than after
-Run_Model(mu_p_out, lambda_out);
+Run_Model(mu_p_m_out, mu_p_f_out, lambda_out);
 
 // Write cohort development times to file
 for (int j=0; j<no_cohorts; j++) {
@@ -64,17 +65,23 @@ cohort_stds_out << endl;
 
 // Write daily pupal emergence to file
 for (int j=0; j<maxtime; j++) {
-	mu_p_out << mu_p.at(j) << " ";
+	mu_p_m_out << mu_p_m.at(j) << " ";
+	mu_p_f_out << mu_p_f.at(j) << " ";
 }
-mu_p_out << endl;
+mu_p_m_out << endl;
+mu_p_f_out << endl;
 
 // Write daily larval and adult counts to file
 for (int j=0; j<maxtime; j++) {
-	L_out << L.at(j) << " ";
-	A_out << A.at(j) << " ";
+	L_m_out << L_m.at(j) << " ";
+	L_f_out << L_f.at(j) << " ";
+	A_m_out << A_m.at(j) << " ";
+	A_f_out << A_f.at(j) << " ";
 }
-L_out << endl;
-A_out << endl;
+L_m_out << endl; 
+L_f_out << endl;
+A_m_out << endl; 
+A_f_out << endl;
 
 return 0;
 
@@ -83,7 +90,7 @@ return 0;
 //------------------------------------------- READ DATA function -------------------------------------------
 
 // Call in input and output files
-void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& mu_p_out, ofstream& L_out, ofstream& A_out, ofstream& lambda_out){
+void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& mu_p_m_out, ofstream& L_m_out, ofstream& A_m_out, ofstream& mu_p_f_out, ofstream& L_f_out, ofstream& A_f_out, ofstream& lambda_out){
 
 // Read in hatch dates
 ifstream hdate_data, hatch_data;
@@ -93,18 +100,21 @@ hdate_data >> hdate.at(i);
 }
 
 // Open input and output files in inits file
-string cohort_means_file, cohort_stds_file, mu_p_file, L_file, A_file, lambda_file;
-cin >> cohort_means_file >> cohort_stds_file >> mu_p_file >> L_file >> A_file >> lambda_file;
+string cohort_means_file, cohort_stds_file, mu_p_m_file, L_m_file, A_m_file, mu_p_f_file, L_f_file, A_f_file, lambda_file;
+cin >> cohort_means_file >> cohort_stds_file >> mu_p_m_file >> L_m_file >> A_m_file >> mu_p_f_file >> L_f_file >> A_f_file >> lambda_file;
 
 // Print file names to console
-cout << " cohort_means_file " << cohort_means_file << " cohort_stds_file " << cohort_stds_file << " mu_p_file " << mu_p_file << " L_file " << L_file << " A_file "<<  A_file  << " lambda_file " << lambda_file << endl;
+cout << " cohort_means_file " << cohort_means_file << " cohort_stds_file " << cohort_stds_file << " mu_p_m_file " << mu_p_m_file << " L_m_file " << L_m_file << " A_m_file " <<  A_m_file  << " mu_p_f_file " << mu_p_f_file << " L_f_file " << L_f_file << " A_f_file " <<  A_f_file  << " lambda_file " << lambda_file << endl;
 
 // Output files
 cohort_means_out.open(cohort_means_file); // mean development times per cohort
 cohort_stds_out.open(cohort_stds_file); // standard deviations of development times per cohort
-mu_p_out.open(mu_p_file); // number of pupae eclosing per day
-L_out.open(L_file); // total number of larvae per day
-A_out.open(A_file); // total number of adults per day
+mu_p_m_out.open(mu_p_m_file); // number of pupae eclosing per day (males)
+L_m_out.open(L_m_file); // total number of larvae per day (males)
+A_m_out.open(A_m_file); // total number of adults per day (males)
+mu_p_f_out.open(mu_p_f_file); 
+L_f_out.open(L_f_file); 
+A_f_out.open(A_f_file); 
 lambda_out.open(lambda_file); // per-capita female fecundity per cohort
 
 // Read in key parameter values in inits file
@@ -118,23 +128,25 @@ cout << "DI_L_cost " << DI_L_cost << " (additional density-INdependent daily mor
 //------------------------------------------- RUN MODEL function -------------------------------------------
 
 // Call in input and output files
-double Run_Model(ofstream& mu_p_out, ofstream& lambda_out){
+double Run_Model(ofstream& mu_p_m_out, ofstream& mu_p_f_out, ofstream& lambda_out){
 
 // Create data containers (by cohort or day)
-vector<double> non_emerg_prob(no_cohorts), L_avg_cohort(no_cohorts), hatch_sim(no_cohorts), mn_dt_gam(no_cohorts), std_dt_gam(no_cohorts), no_emerg_tot(no_cohorts), L_avg(no_cohorts), lambda(no_cohorts);
+vector<double> non_emerg_prob(no_cohorts), L_avg_cohort(no_cohorts), L_avg(no_cohorts), mn_dt_gam(no_cohorts), std_dt_gam(no_cohorts), no_emerg_tot(no_cohorts), hatch_sim(no_cohorts), lambda(no_cohorts);
 vector<int> emerg_flag(no_cohorts);
 
-Matrix_Double L_cohort(maxtime, Row_Double(no_cohorts)); // number of larvae per day per cohort (2500 days x 1000 cohorts)
-Matrix_Double emerg_record(maxtime, Row_Double(no_cohorts)); // number of larvae emerging as pupae per day per cohort (2500 days x 1000 cohorts)
+Matrix_Double L_cohort_m(maxtime, Row_Double(no_cohorts)); // number of larvae per day per cohort (2500 days x 1000 cohorts) (males)
+Matrix_Double L_cohort_f(maxtime, Row_Double(no_cohorts)); 
+Matrix_Double emerg_record_m(maxtime, Row_Double(no_cohorts)); // number of larvae emerging as pupae per day per cohort (2500 days x 1000 cohorts) (males)
+Matrix_Double emerg_record_f(maxtime, Row_Double(no_cohorts)); 
 
 // Declare temporary variables
-double surv_L, L_avg1, L_cum2, L_cum, denom2, Dt_shp, Dt_scl, prob, no_emerge, L_avg_f, lambda_max, survA_imm, intc_TL, alpha_TL, exp_TL, a_value, b_value, b_value2, intc_f, alpha_f, survA, lambda1, lambda_min, mean_max, std_max, std_min, mean_dt1, mean_lambda, mean_std_dt;
+double surv_L, L_avg1, L_cum2, L_cum, denom2, Dt_shp, Dt_scl, prob, no_emerge, no_emerge_m, no_emerge_f, L_avg_f, lambda_max, survA_imm, intc_TL, alpha_TL, exp_TL, a_value, b_value, b_value2, intc_f, alpha_f, survA, lambda1, lambda_min, mean_max, std_max, std_min, mean_dt1, mean_lambda, mean_std_dt, sex_ratio, emerg_record, L_cohort;
 int first_hatch_date, max_cohort, L_max, time_lag, tlagh, tlagg, tlagi, tlagp, min_cohort, max_dt_int, dens_lag;
 
 // Time lags (locals)
 first_hatch_date=hdate.at(0);
-tlagh = 5; // time between oviposition and egg hatching
-tlagg = 6; // time between eclosing as pupae and being ready to lay eggs (i.e. includes tlagp)
+tlagh = 5; // oviposition to egg hatching
+tlagg = 6; // emerging as adults to being ready to lay eggs
 tlagi = 21; // time over which larval density is averaged (to calculate effect of density)
 tlagp = 2; // pupal development time
 
@@ -149,6 +161,8 @@ exp_TL = 0.533; // mean larval development time gamma distribution - exponent (f
 a_value = 0.22; // std dev larval development time gamma distribution - intercept (fitted from experimental data)
 b_value = 0.0168; // std dev larval development time gamma distribution - slope (fitted from experimental data)
 b_value2 = 0.867; // std dev larval development time gamma distribution - exponent (fitted from experimental data)
+
+sex_ratio = 0.5; // sex ratio (offspring)
 
 // Biological limits (locals)
 max_dt_int = 100; // cohorts older than 100 days are ignored
@@ -166,42 +180,48 @@ survA_imm=survA; // survival rate for adults (same as above)
 // Arrays (by day and cohort)
 for (int i=0; i<maxtime; i++){
 	for (int j=0; j<no_cohorts; j++){
-		L_cohort[i][j] = 0; // number of larvae per day per cohort
-		emerg_record[i][j] = 0; // number of larvae emerging as pupae per day per cohort
+		L_cohort_m[i][j] = 0; // number of larvae (males)
+		L_cohort_f[i][j] = 0; 
+		emerg_record_m[i][j] = 0; // number of new pupae (males)
+		emerg_record_f[i][j] = 0; 
 	}
 }
 
 // Arrays (by cohort)  
 for (int i=0; i<no_cohorts; i++){
-	non_emerg_prob.at(i) = 1; // cumulative probability per cohort that a larva has not yet emerged as a pupa (1 = 100%; decreases over time)
-	emerg_flag.at(i) = 0; // flag to track if enough pupae have emerged per cohort to start calculating statistics
-	L_avg_cohort.at(i) = 0; // running average larval density experienced by each cohort (i.e. used to set above flag; not final)
-	L_avg.at(i) = 0; // average larval density experienced by each cohort when they were larvae (i.e. experienced by the mothers; final once all larvae have emerged)
-	mn_dt_gam.at(i) = 999; // mean larval development time (days) for each cohort (used for gamma distribution)
-	std_dt_gam.at(i) = 1; // standard deviation of larval development time for each cohort (used for gamma distribution)
-	mean_dt.at(i) = 0; // mean larval development time (days) for each cohort (final)
-	std_dt.at(i) = 0; // standard deviation of larval development time for each cohort (final)
-	no_emerg_tot.at(i) = 0; // total number of larvae that have emerged for each cohort across all timesteps
+	non_emerg_prob.at(i) = 1; // cumulative probability that a larva has not yet emerged as a pupa (1 = 100%; decreases over time)
+	emerg_flag.at(i) = 0; // flag to track if enough pupae have emerged to start calculating statistics
+	L_avg_cohort.at(i) = 0; // running average larval density experienced (estimated)
+	L_avg.at(i) = 0; // average larval density experienced (final)
+	mn_dt_gam.at(i) = 999; // mean larval development time (used for gamma distribution)
+	std_dt_gam.at(i) = 1; // standard deviation of larval development time (used for gamma distribution)
+	mean_dt.at(i) = 0; // mean larval development time (final)
+	std_dt.at(i) = 0; // standard deviation of larval development time (final)
+	no_emerg_tot.at(i) = 0; // number of new larvae
 	hatch_sim.at(i) = 0; // number of larvae hatching into each cohort (i.e. size of cohort at time of hatching)
 }
 
 // Arrays (by day) 
 for (int i=0; i<maxtime; i++) {
-	A_ovipos.at(i) = 0; // total number of reproductively active females by day
-	L.at(i) = 0; // total number of larvae by day
-	mu_p.at(i) = 0; // total number of pupae eclosing into adults by day
-}
-
-// Arrays (by day - with 3 columns, one for each pupal stage (0-2 days)) 
-for (int i=0; i<maxtime; i++){
-	for (int j=0; j<3; j++){
-		P[i][j]=0; // total number of pupae of each age by day
+	A_ovipos.at(i) = 0; // number of reproductively active females
+	L_m.at(i) = 0; // number of larvae (males)
+	L_f.at(i) = 0; 
+	mu_p_m.at(i) = 0; // number of new adults (males)
+	mu_p_f.at(i) = 0; 
+	// With 3 columns, one for each pupal stage (0-2 days)
+	for (int j=0; j<3; j++){ 
+		P_m[i][j]=0; // number of pupae (males)
+		P_f[i][j]=0; 
 	}
 }
 
-// Arrays (by day - starts at 2 then 0 for all other days)
-A.at(0) = 2;
-for (int i=1; i<maxtime; i++) A.at(i)=0; // total number of adults by day
+// Arrays (by day - starts at 1 then 0 for all other days)
+A_m.at(0) = 1;
+A_f.at(0) = 1;
+for (int i=1; i<maxtime; i++) {
+	A_m.at(i)=0; // number of adults (males)
+	A_f.at(i)=0; 
+}
 
 
 //------------------------------------- RUN MODEL function: Time Loop -------------------------------------
@@ -226,7 +246,8 @@ for (int time1=1; time1<maxtime; time1++){
 		//------------------------------------------------- Larvae -----------------------------------------
 
 		// Calculate number of larvae alive today
-		L_cohort[time1][cohort] = L_cohort[time1-1][cohort] * surv_L; // larvae alive yesterday * survival rate
+		L_cohort_m[time1][cohort] = L_cohort_m[time1-1][cohort] * surv_L; // larvae alive yesterday * survival rate (males)
+		L_cohort_f[time1][cohort] = L_cohort_f[time1-1][cohort] * surv_L; 
 		
 		// Check if today is a hatch date - if yes, calculate number of new larvae hatching today
 		if (time1 == hdate.at(cohort)){
@@ -240,7 +261,7 @@ for (int time1=1; time1<maxtime; time1++){
 			// Case 1: full window within simulation (i.e. start ≥ first hatch date)
 			if (dens_lag>=hdate.at(1)){
 				// Total larvae (21 days)/21 days = larval density experienced
-				for (int j=time1-tlagh-tlagg-tlagi; j<time1-tlagh-tlagg; j++) L_avg.at(cohort) += L.at(j);
+				for (int j=time1-tlagh-tlagg-tlagi; j<time1-tlagh-tlagg; j++) L_avg.at(cohort) += L_m.at(j) + L_f.at(j);
 					L_avg.at(cohort) = L_avg.at(cohort)/tlagi; 
 			}
 
@@ -251,7 +272,7 @@ for (int time1=1; time1<maxtime; time1++){
 				// Case 2b: end > first hatch date (i.e. window partially within simulation)
 				if (time1-tlagh-tlagg>hdate.at(1)) {
 					for (int j=dens_lag; j<=hdate.at(1); j++) L_avg.at(cohort) += 60; // section before first hatch date = default (60 larvae per day)
-					for (int j=hdate.at(1)+1; j<=time1-tlagh-tlagg; j++) L_avg.at(cohort) += L.at(j); // section after first hatch date = total larvae per day (real data)
+					for (int j=hdate.at(1)+1; j<=time1-tlagh-tlagg; j++) L_avg.at(cohort) += L_m.at(j) + L_f.at(j); // section after first hatch date = total larvae per day (real data)
 					L_avg.at(cohort) = L_avg.at(cohort)/tlagi;
 				} 
 			}
@@ -277,7 +298,8 @@ for (int time1=1; time1<maxtime; time1++){
 			}
 
 			// Store newly hatched larvae as starting larval population for this new cohort
-			L_cohort[time1][cohort] = hatch_sim.at(cohort);	
+			L_cohort_m[time1][cohort] = sex_ratio*hatch_sim.at(cohort);	
+			L_cohort_f[time1][cohort] = (1-sex_ratio)*hatch_sim.at(cohort);	
 
 		} // End loop for newly hatching larvae	
 
@@ -300,14 +322,17 @@ for (int time1=1; time1<maxtime; time1++){
 
 				// Calculate cumulative number of larvae from hatch to emergence day
 				for (int k=hdate.at(cohort); k<etime; k++) {
-					L_cum += L.at(k);
+					L_cum += L_m.at(k) + L_f.at(k);
 				}
 
+				// Calculate total larvae emerging (sum by sex)
+				emerg_record = emerg_record_m[etime][cohort] + emerg_record_f[etime][cohort];
+
 				// Calculate weighted average
-				L_cum2 += emerg_record[etime][cohort] * L_cum/(etime-hdate.at(cohort)); // number emerged * daily average
+				L_cum2 += emerg_record * L_cum/(etime-hdate.at(cohort)); // number emerged * daily average
 				
 				// Store cumulative number of larvae emerged as pupae
-				denom2 += emerg_record[etime][cohort];
+				denom2 += emerg_record;
 			}
 
 			// Check when to use weighted average
@@ -352,15 +377,19 @@ for (int time1=1; time1<maxtime; time1++){
 				Dt_shp = 9.0;
 				Dt_scl = 0.2;
 				prob = gsl_cdf_gamma_P(time_lag-4,Dt_shp,Dt_scl) - gsl_cdf_gamma_P(time_lag-4-1,Dt_shp,Dt_scl);
-			   
 			}
+
+			// Calculate total number of larvae (sum by sex)
+			L_cohort = L_cohort_m[time1-1][cohort] + L_cohort_f[time1-1][cohort];
 			
 			// Convert probability to numbers
-			no_emerge = L_cohort[time1-1][cohort] * prob/non_emerg_prob.at(cohort);
+			no_emerge = L_cohort * prob/non_emerg_prob.at(cohort); // total
+			no_emerge_m = sex_ratio * no_emerge; // males
+            no_emerge_f = (1-sex_ratio) * no_emerge; // females
 			
 			// Sanity checks
-			if (no_emerge > L_cohort[time1-1][cohort]){
-				no_emerge=L_cohort[time1-1][cohort];
+			if (no_emerge > L_cohort){
+				no_emerge=L_cohort;
 			 	prob=1;
 			}
 
@@ -368,17 +397,25 @@ for (int time1=1; time1<maxtime; time1++){
 			if (prob<0) prob=0;
 
 			// Updates based on calculations
-			non_emerg_prob.at(cohort) *= (1-prob/non_emerg_prob.at(cohort));
-			L_cohort[time1][cohort] -= no_emerge; // remove emerging larvae from larvae compartment
-			emerg_record[time1][cohort]=no_emerge; // store emerging larvae
-			mean_dt.at(cohort)+=(time1-hdate.at(cohort))*no_emerge;
+			non_emerg_prob.at(cohort) *= (1-prob/non_emerg_prob.at(cohort)); // update probability of not emerging
+	
+			L_cohort_m[time1][cohort] -= no_emerge_m; // remove emerging larvae from larvae compartment (males)
+            L_cohort_f[time1][cohort] -= no_emerge_f; 
+			
+			emerg_record_m[time1][cohort] = no_emerge_m; // store emerging larvae (males)
+			emerg_record_f[time1][cohort] = no_emerge_f; 
+
+			mean_dt.at(cohort)+=(time1-hdate.at(cohort))*no_emerge; // accumulate mean development time
 			no_emerg_tot.at(cohort)+=no_emerge;
-			P[time1][0] += no_emerge; // add emerging larvae to pupae compartment
+
+			P_m[time1][0] += no_emerge_m; // add emerging larvae to pupae compartment (males)
+			P_f[time1][0] += no_emerge_f; 
 
 		} // End loop for calculating number of larvae emerging as pupae
 
 		// Store total number of larvae
-		L.at(time1)+=L_cohort[time1][cohort]; // add up total larvae from each cohort
+		L_m.at(time1) += L_cohort_m[time1][cohort]; // add up total larvae from each cohort
+		L_f.at(time1) += L_cohort_f[time1][cohort];
 
 	} // End loop for calculations for each active cohort
 
@@ -386,17 +423,20 @@ for (int time1=1; time1<maxtime; time1++){
 	//--------------------------------------------- Adults --------------------------------------------
 
 	// Calculate number of pupae alive today
-	P[time1][1] = P[time1-1][0]*survA; // move into second pupal day
+	P_m[time1][1] = P_m[time1-1][0] * survA; // move into second pupal day
+	P_f[time1][1] = P_f[time1-1][0] * survA;
 
 	// Calculate number of adults alive today
-	A[time1] = A[time1-1]*survA;
+	A_m[time1] = A_m[time1-1] * survA;
+	A_f[time1] = A_f[time1-1] * survA;
 
 	// Calculate number of pupae graduating into adults today
-	A[time1] += P[time1-1][1]*survA;
+	A_m[time1] += P_m[time1-1][1] * survA;
+	A_f[time1] += P_f[time1-1][1] * survA;
 
 	// Calculate number of adult females ready to lay eggs
 	if (time1>=tlagg) { // adults must be at least 6 days old to be ready to lay eggs
-		A_ovipos[time1] = 0.5*A[time1-tlagg+tlagp] * pow(survA,tlagg-tlagp-1); // females that became adults 4 days (eclosed 6 days ago) that are still alive
+		A_ovipos[time1] = A_f[time1-tlagg+tlagp] * pow(survA,tlagg-tlagp-1); // females that became adults 4 days (eclosed 6 days ago) that are still alive
 	}
 
 } // End time loop
@@ -409,7 +449,8 @@ for (int i=0; i<no_cohorts; i++) {
 	else mean_dt.at(i)=0;
 	for (int j=0; j<maxtime; j++) { // accumulate squared deviations
 		if (j>hdate.at(i)+4){
-			std_dt.at(i) +=(j-hdate.at(i)-mean_dt.at(i))*(j-hdate.at(i)-mean_dt.at(i))*emerg_record[j][i];
+			emerg_record = emerg_record_f[j][i] + emerg_record_m[j][i];
+			std_dt.at(i) +=(j-hdate.at(i)-mean_dt.at(i))*(j-hdate.at(i)-mean_dt.at(i))*emerg_record;
 		}
    	}
 	if (no_emerg_tot.at(i)>0) std_dt.at(i) = sqrt(std_dt.at(i)/no_emerg_tot.at(i)); // std dev
@@ -419,7 +460,8 @@ for (int i=0; i<no_cohorts; i++) {
 // Calculate total number of pupae that emerged each day
 for (int i=0; i<maxtime; i++) {
 	for (int j=0; j<no_cohorts; j++) {
-		mu_p.at(i) += emerg_record[i][j];
+		mu_p_m.at(i) += emerg_record_m[i][j];
+        mu_p_f.at(i) += emerg_record_f[i][j];
 	}
 }
 
@@ -436,9 +478,9 @@ for (int i=300; i<800; i++){ // averaged across cohorts 300 to 800
 
 // Print summary statistics
 cout << endl;
-cout << "mean_dt " << mean_dt1/500 <<" (the average (over time) of the mean development time of (uninfected) larvae) " << endl;
+cout << "mean_dt " << mean_dt1/500 <<" (the average (over time) of the mean development time of (wildtype) larvae) " << endl;
 cout << "mean_lambda " << mean_lambda/500 << " (the average (over time) of per-capita female fecundity) " << endl;
-cout << "mean_std_dt " << mean_std_dt/500 << " (the average (over time) of the standard deviation of the development time of (uninfected) larvae " <<  endl;
+cout << "mean_std_dt " << mean_std_dt/500 << " (the average (over time) of the standard deviation of the development time of (wildtype) larvae " <<  endl;
 
 return 0;			
 
