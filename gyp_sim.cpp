@@ -132,7 +132,8 @@ double Run_Model(ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& lambd
 int tlagh = 5; // oviposition to egg hatching
 int tlagl = 21; // time over which larval density is averaged
 int tlagp = 2; // pupal development time
-int tlagg = 6; // emerging as adults to being ready to lay eggs
+int tlagg = 4; // emerging as adults to being ready to lay eggs (females)
+int tlagm = 2; // emerging as adults and being ready to mate (males)
 
 // Mortality
 double survA = 1-0.03-costA; // daily survival rate of adults - base mortality is 3% per day, plus any additional cost (costA)
@@ -166,7 +167,7 @@ int cohort_age_max = 100; // cohorts older than 100 days are ignored
 
 // Temporary variables
 double L_avg_f, lambda1, L_cum, L_cum2, denom, L_avg_gam1, P_emerg_cohort, dt_shp, dt_scl, prob, P_emerge_today, L_cohort;
-int dens_lag, max_cohort, min_cohort, time_lag;
+int start, end, max_cohort, min_cohort, time_lag;
 
 
 // Create local data containers
@@ -236,34 +237,35 @@ for (int time1=1; time1<maxtime; time1++){
 
 		//------------------------------------------------- Larvae -----------------------------------------
 
-		// Calculate number of larvae alive today
+		// Calculate number of yesterday's larvae still alive
 		Lm_cohort[time1][cohort] = Lm_cohort[time1-1][cohort] * survL; // larvae alive yesterday * survival rate (males)
 		Lf_cohort[time1][cohort] = Lf_cohort[time1-1][cohort] * survL; 
 		
 		// Check if today is a hatch date - if yes, calculate number of new larvae hatching today
 		if (time1 == hdate.at(cohort)){
 
-			// Calculate starting point of look-back window 
-			dens_lag = time1-tlagh-tlagg-tlagl; // 32 days ago, when parent larvae started developing
+			// Calculate start/end point of look-back window 
+			start = time1-tlagh-tlagg-tlagp-tlagl; // 32 days ago, when parent larvae started developing
+			end = time1-tlagh-tlagg-tlagp; // 11 days ago, when parent larvae emerged as pupae
 
 			// Calculate average larval density experienced by this cohort (parents)
 			L_avg.at(cohort) = 0; // initialise
 
 			// Case 1: full window within simulation (i.e. start ≥ first hatch date)
-			if (dens_lag>=hdate.at(1)){
+			if (start>=hdate.at(1)){
 				// Total larvae (21 days)/21 days = larval density experienced
-				for (int j=time1-tlagh-tlagg-tlagl; j<time1-tlagh-tlagg; j++) L_avg.at(cohort) += Lm.at(j) + Lf.at(j);
+				for (int j=start; j<end; j++) L_avg.at(cohort) += Lm.at(j) + Lf.at(j);
 					L_avg.at(cohort) = L_avg.at(cohort)/tlagl; 
 			}
 
 			// Case 2: window partially overlaps with simulation (i.e. start < first hatch date, but still after day 0)
-			else if (dens_lag>=0) {
+			else if (start>=0) {
 				// Case 2a: end < first hatch date (i.e. full window outside simulation) - I don't think this can happen, first hatch date is day 4
-				if (time1-tlagh-tlagg<=hdate.at(1)) L_avg.at(cohort) = 60; // default average density (60)
+				if (end<=hdate.at(1)) L_avg.at(cohort) = 60; // default average density (60)
 				// Case 2b: end > first hatch date (i.e. window partially within simulation)
-				if (time1-tlagh-tlagg>hdate.at(1)) {
-					for (int j=dens_lag; j<=hdate.at(1); j++) L_avg.at(cohort) += 60; // section before first hatch date = default (60 larvae per day)
-					for (int j=hdate.at(1)+1; j<=time1-tlagh-tlagg; j++) L_avg.at(cohort) += Lm.at(j) + Lf.at(j); // section after first hatch date = total larvae per day (real data)
+				if (end>hdate.at(1)) {
+					for (int j=start; j<=hdate.at(1); j++) L_avg.at(cohort) += 60; // section before first hatch date = default (60 larvae per day)
+					for (int j=hdate.at(1)+1; j<=end; j++) L_avg.at(cohort) += Lm.at(j) + Lf.at(j); // section after first hatch date = total larvae per day (real data)
 					L_avg.at(cohort) = L_avg.at(cohort)/tlagl;
 				} 
 			}
@@ -283,8 +285,8 @@ for (int time1=1; time1<maxtime; time1++){
 			lambda.at(cohort) = lambda1;
 
 			// Calculate number of new larvae hatching today
- 			if (time1>tlagh+tlagg){ // prevents hatching from happening until enough time has passed for first adults in simulation to lay eggs (11 days)
-				L_hatch.at(cohort) = lambda1*A_ovipos.at(time1-tlagh); // fecundity * number of adult females ready to lay eggs (at c - Th)
+ 			if (time1>tlagh+tlagg){ // prevents hatching from happening until enough time has passed for first adults in simulation to lay eggs (9 days)
+				L_hatch.at(cohort) = lambda1*A_ovipos.at(time1-tlagh); // fecundity * number of adult females ready to lay eggs
 			}
 
 			// Store newly hatched larvae as starting larval population for this new cohort
@@ -355,7 +357,6 @@ for (int time1=1; time1<maxtime; time1++){
 			time_lag = time1 - hdate.at(cohort);
 
 			// Calculate probability of emerging today
-			prob;
 			if (time_lag>5 && dt_mean_gam.at(cohort)>0 && dt_shp>0 && dt_scl>0 && dt_shp<200 && dt_scl<200){				 
 				prob = gsl_cdf_gamma_P(time_lag-5,dt_shp,dt_scl) - gsl_cdf_gamma_P(time_lag-5-1,dt_shp,dt_scl);
 			}
@@ -422,8 +423,8 @@ for (int time1=1; time1<maxtime; time1++){
 	Af[time1] += Pf[time1-1][1] * survA;
 
 	// Calculate number of adult females ready to lay eggs
-	if (time1>=tlagg) { // adults must be at least 6 days old to be ready to lay eggs
-		A_ovipos[time1] = Af[time1-tlagg+tlagp] * pow(survA,tlagg-tlagp-1); // females that became adults 4 days (eclosed 6 days ago) that are still alive
+	if (time1>=tlagg) { // adult females must be at least 4 days old to be ready to lay eggs
+		A_ovipos[time1] = Af[time1-tlagg] * pow(survA,tlagg-1); // females that emerged as adults 4 days ago that are still alive (adjusted survival)
 	}
 
 } // End time loop
