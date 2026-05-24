@@ -374,7 +374,7 @@ for (int time1=1; time1<maxtime; time1++){
 
 			// Calculate number of new larvae hatching today
  			if (time1>tlagh+tlagg){ // prevents hatching from happening until enough time has passed for first adults in simulation to lay eggs (9 days)
-				L_hatch.at(cohort) = lambda1 * A_ovipos.at(time1-tlagh); // fecundity * number of adult females ready to mate
+				L_hatch.at(cohort) = lambda1 * A_ovipos.at(time1-tlagh-tlagg); // fecundity * number of adult females ready to mate
 			}
 
 			// Store newly hatched larvae as starting larval population for this new cohort
