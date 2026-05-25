@@ -528,9 +528,11 @@ for (int time1=1; time1<maxtime; time1++){
 
 	Am_gm[time1] += Pm_gm[time1-1][1] * survA;
 
-	// Release event (only one release currently)
-	if (time1 == release_day){
-    	Am_gm_release.at(time1) += release_size;
+	// Release event (once weekly for 3 months i.e. 12 releases)
+	for (int r = 0; r < 12; r++){ // number of releases/weeks
+    if (time1 == release_day + r * 7){ // check if today is a release day
+        Am_gm_release.at(time1) += release_size; // same release size every time
+    }
 	}
 
 	// Calculate number of adult females ready to lay eggs
