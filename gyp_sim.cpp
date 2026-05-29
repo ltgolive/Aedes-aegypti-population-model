@@ -25,7 +25,7 @@ typedef vector<double> Row_Double;
 typedef vector<Row_Double> Matrix_Double;
 
 // Declare functions
-void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& lambda_out, ofstream& Lm_out, ofstream& Lf_out, ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& Am_out, ofstream& Af_out, ofstream& Lm_gm_out, ofstream& Lf_gm_out, ofstream& Pm_gm_emerg_out, ofstream& Am_gm_out, ofstream& Am_gm_release_out);
+void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& lambda_out, ofstream& Lm_out, ofstream& Lf_out, ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& Am_out, ofstream& Af_out, ofstream& Lm_gm_out, ofstream& Lf_gm_out, ofstream& Pm_gm_emerg_out, ofstream& Am_gm_out , ofstream& Am_gm_release_out);
 double Run_Model(ofstream& lambda_out);
 
 // Declare global variables
@@ -36,9 +36,9 @@ int release_size, release_day;
 
 // Declare global data containers
 vector<float> dt_mean(no_cohorts), dt_std(no_cohorts), A_ovipos(maxtime);
-vector<double> Pm_emerg(maxtime), Lm(maxtime), Am(maxtime), Pf_emerg(maxtime), Lf(maxtime), Af(maxtime); // wildtype
+vector<double> Lm(maxtime), Pm_emerg(maxtime), Am(maxtime), Am_mate(maxtime), Lf(maxtime), Pf_emerg(maxtime), Af(maxtime); // wildtype
 Matrix_Double Pm(maxtime, Row_Double(3)), Pf(maxtime, Row_Double(3)); // wildtype
-vector<double> Pm_gm_emerg(maxtime), Lm_gm(maxtime), Am_gm(maxtime), Lf_gm(maxtime), Am_gm_release(maxtime); // GM
+vector<double> Lm_gm(maxtime), Pm_gm_emerg(maxtime), Am_gm(maxtime), Am_gm_mate(maxtime), Am_gm_release(maxtime), Am_gm_release_mate(maxtime), Lf_gm(maxtime); // GM
 Matrix_Double Pm_gm(maxtime, Row_Double(3)); // GM
 vector<int> hdate(no_cohorts);
 
@@ -121,8 +121,9 @@ cin >> cohort_means_file >> cohort_stds_file >> lambda_file >> Lm_file >> Lf_fil
 
 // Print file names to console
 cout << " cohort_means_file " << cohort_means_file << " cohort_stds_file " << cohort_stds_file << " lambda_file " << lambda_file << endl;
-cout << " Lm_file " << Lm_file << " Lf_file " << Lf_file << " Pm_emerg_file " << Pm_emerg_file << " Pf_emerg_file " << Pf_emerg_file << " Am_file " << Am_file << " Af_file " << Af_file << endl;
-cout << " Lm_gm_file " << Lm_gm_file << " Lf_gm_file " << Lf_gm_file << " Pm_gm_emerg_file " << Pm_gm_emerg_file << " Am_gm_file " << Am_gm_file << " Am_gm_release_file " << Am_gm_release_file << endl;
+cout << " Lm_file " << Lm_file << " Lf_file " << Lf_file << " Lm_gm_file " << Lm_gm_file << " Lf_gm_file " << Lf_gm_file << endl;
+cout << " Pm_emerg_file " << Pm_emerg_file << " Pf_emerg_file " << Pf_emerg_file << " Pm_gm_emerg_file " << Pm_gm_emerg_file << endl;
+cout << " Am_file " << Am_file << " Af_file " << Af_file << " Am_gm_file " << Am_gm_file << " Am_gm_release_file " << Am_gm_release_file << endl;
 
 // Output files
 cohort_means_out.open(cohort_means_file); // mean development times per cohort
@@ -135,7 +136,7 @@ Lf_out.open(Lf_file);
 Pm_emerg_out.open(Pm_emerg_file); // total number of pupae emerging per day       
 Pf_emerg_out.open(Pf_emerg_file); 
 
-Am_out.open(Am_file); // total number of adults per day                   
+Am_out.open(Am_file); // total number of adults per day                  
 Af_out.open(Af_file);   
 
 Lm_gm_out.open(Lm_gm_file);              
@@ -143,7 +144,7 @@ Lf_gm_out.open(Lf_gm_file);
 
 Pm_gm_emerg_out.open(Pm_gm_emerg_file); 
   
-Am_gm_out.open(Am_gm_file);               
+Am_gm_out.open(Am_gm_file);                
 Am_gm_release_out.open(Am_gm_release_file);
 
 // Read in key parameter values in inits file and print to check correctly read
@@ -205,7 +206,6 @@ int cohort_age_max = 100; // cohorts older than 100 days are ignored
 int max_cohort, min_cohort; // active cohorts
 
 double Am_total, Am_gm_release_freq, Am_gm_freq, Am_freq; // mating equation
-int t_mate;
 
 double L_avg_f, lambda1; // hatching larvae/fecundity
 int start, end; 
@@ -251,6 +251,7 @@ for (int i=0; i<no_cohorts; i++){
 // By day
 for (int i=0; i<maxtime; i++) {
 	// Wildtype
+	Am_mate.at(i) = 0.0; // adult males ready to mate
 	A_ovipos.at(i) = 0.0; // number of reproductively active females
 	Lm.at(i) = 0.0; // number of larvae (males)
 	Lf.at(i) = 0.0; 
@@ -259,6 +260,8 @@ for (int i=0; i<maxtime; i++) {
 	// GM
 	Am_gm.at(i) = 0.0;
 	Am_gm_release.at(i) = 0.0;
+	Am_gm_mate.at(i) = 0.0;
+	Am_gm_release_mate.at(i) = 0.0;
 	Lm_gm.at(i) = 0.0; 
 	Lf_gm.at(i) = 0.0; 
 	Pm_gm_emerg.at(i) = 0.0; 
@@ -294,18 +297,16 @@ for (int time1=1; time1<maxtime; time1++){
 	for (int i=no_cohorts-1; i>=0; i--) if (hdate.at(i)>=time1 - cohort_age_max) min_cohort = i;	
 
 	// Calculate male type frequency for mating equation
-	t_mate = tlagh+tlagg; // time of mating (as soon as females emerge +1 day, since calculated based on yesterday's counts)
-
 	Am_freq            = 1.0;
 	Am_gm_freq         = 0.0;
 	Am_gm_release_freq = 0.0;
 
-	if (time1>tlagh+tlagg){ // wait until enough time has passed for second generation adults in simulation to emerge
-		Am_total = Am.at(time1-t_mate) + Am_gm.at(time1-t_mate) + Am_gm_release.at(time1-t_mate);
+	if (time1>=tlagh+tlagg){ 
+		Am_total = Am_mate.at(time1-tlagh-tlagg) + Am_gm_mate.at(time1-tlagh-tlagg) + Am_gm_release_mate.at(time1-tlagh-tlagg);
 
 		if (Am_total > 0.0){
-			Am_gm_release_freq = Am_gm_release.at(time1-t_mate) / Am_total; // % released GM males
-			Am_gm_freq = Am_gm.at(time1-t_mate) / Am_total; // % second generation GM males
+			Am_gm_release_freq = Am_gm_release_mate.at(time1-tlagh-tlagg) / Am_total; // % released GM males
+			Am_gm_freq = Am_gm_mate.at(time1-tlagh-tlagg) / Am_total; // % second generation GM males
 			Am_freq = 1.0 - Am_gm_freq - Am_gm_release_freq; // % wildtype males
 		}
 	}
@@ -533,6 +534,13 @@ for (int time1=1; time1<maxtime; time1++){
     if (time1 == release_day + r * 7){ // check if today is a release day
         Am_gm_release.at(time1) += release_size; // same release size every time
     }
+	}
+
+	// Calculate number of males ready to mate
+	if (time1>=tlagm){ // adult males must be at least 2 days old to be able to mate
+    	Am_mate[time1] = Am[time1-tlagm] * pow(survA, tlagm-1);
+    	Am_gm_mate[time1] = Am_gm[time1-tlagm] * pow(survA, tlagm-1);
+    	Am_gm_release_mate[time1] = Am_gm_release[time1-tlagm] * pow(survA, tlagm-1);
 	}
 
 	// Calculate number of adult females ready to lay eggs
