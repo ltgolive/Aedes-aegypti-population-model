@@ -176,7 +176,7 @@ int tlagf = 1; // emerging as adults and being ready to mate (females)
 // Mortality
 double survA = 1-0.03-costA; // daily survival rate of adults - base mortality is 3% per day, plus any additional cost (costA)
 double survL = 0.95-costL; // daily survival rate of larvae
-double survLf_gm = 0.001; // daily survival rate of GM female larvae
+double survLf_gm = survL; // daily survival rate of GM female larvae
 
 // Fecundity (log-linear relationship)
 double lambda_intc = 28.0; // intercept 
@@ -215,7 +215,7 @@ int start, end;
 double L_cum, L_cum2, denom, L_avg_gam1, P_emerg_cohort; // expected mean & std dev
 int time_lag;
 
-double dt_shp, dt_scl, prob, L_cohort, P_emerge_today, Pm_gm_emerge_today; // pupal emergence
+double dt_shp, dt_scl, prob, L_cohort, P_emerge_today, Pm_gm_emerge_today, Pf_gm_emerge_today; // pupal emergence
 
 
 // Create local data containers
@@ -229,6 +229,7 @@ Matrix_Double Pf_emerg_cohort(maxtime, Row_Double(no_cohorts, 0.0));
 Matrix_Double Lm_gm_cohort(maxtime, Row_Double(no_cohorts, 0.0)); 
 Matrix_Double Lf_gm_cohort(maxtime, Row_Double(no_cohorts, 0.0)); 
 Matrix_Double Pm_gm_emerg_cohort(maxtime, Row_Double(no_cohorts, 0.0)); 
+Matrix_Double Pf_gm_emerg_cohort(maxtime, Row_Double(no_cohorts, 0.0));
 
 // By cohort 
 vector<double> non_emerg_prob(no_cohorts, 1.0); // cumulative probability that a larva has not yet emerged as a pupa (1 = 100%; decreases over time)
@@ -458,15 +459,18 @@ for (int time1=1; time1<maxtime; time1++){
 			// Convert probability to numbers
 			L_cohort = Lm_cohort[time1-1][cohort] + Lf_cohort[time1-1][cohort]; // total wildtype larvae
 
-			P_emerge_today = L_cohort * prob/non_emerg_prob.at(cohort); // total
+			P_emerge_today = L_cohort * prob/non_emerg_prob.at(cohort); // total wildtype
 			Pm_gm_emerge_today = Lm_gm_cohort[time1-1][cohort] * prob / non_emerg_prob.at(cohort);
+			Pf_gm_emerge_today = Lf_gm_cohort[time1-1][cohort] * prob / non_emerg_prob.at(cohort);
 			
 			// Sanity checks
 			if (P_emerge_today > L_cohort){P_emerge_today = L_cohort; prob=1;} // prevents more pupae emerging than larvae exist
-			if (Pm_gm_emerge_today > Lm_gm_cohort[time1-1][cohort]) {Pm_gm_emerge_today = Lm_gm_cohort[time1-1][cohort]; prob = 1;}
+			if (Pm_gm_emerge_today > Lm_gm_cohort[time1-1][cohort]) {Pm_gm_emerge_today = Lm_gm_cohort[time1-1][cohort]; prob=1;}
+			if (Pf_gm_emerge_today > Lf_gm_cohort[time1-1][cohort]) {Pf_gm_emerge_today = Lf_gm_cohort[time1-1][cohort]; prob=1;}
 			
 			if (P_emerge_today<0){P_emerge_today=0; prob=0;} // prevents negative emergence
 			if (Pm_gm_emerge_today<0){Pm_gm_emerge_today=0; prob=0;}
+			if (Pf_gm_emerge_today<0){Pf_gm_emerge_today=0; prob=0;}
 			
 			if (prob<0) prob=0; // further prevents negative probability of emergence
 
@@ -476,12 +480,14 @@ for (int time1=1; time1<maxtime; time1++){
 			Lm_cohort[time1][cohort] -= sex_ratio * P_emerge_today; // remove emerging larvae from larvae compartment
             Lf_cohort[time1][cohort] -= (1-sex_ratio) * P_emerge_today;
 			Lm_gm_cohort[time1][cohort] -= Pm_gm_emerge_today;
+			Lf_gm_cohort[time1][cohort] -= Pf_gm_emerge_today;
 			
 			Pm_emerg_cohort[time1][cohort] = sex_ratio * P_emerge_today; // store emerging pupae by day into each cohort
 			Pf_emerg_cohort[time1][cohort] = (1-sex_ratio) * P_emerge_today;
 			Pm_gm_emerg_cohort[time1][cohort]  = Pm_gm_emerge_today;
+			Pf_gm_emerg_cohort[time1][cohort] = Pf_gm_emerge_today; // stored to monitor how many larvae are removed but not added to pupal compartment below
 
-			P_emerg.at(cohort) += P_emerge_today; // store total number of pupae that emerged by cohort
+			P_emerg.at(cohort) += P_emerge_today; // store total number of wildtype/GM pupae that emerged by cohort
 			P_gm_emerg.at(cohort) += Pm_gm_emerge_today;
 
 			Pm[time1][0] += sex_ratio * P_emerge_today; // add emerging pupae to pupae compartment (males)
