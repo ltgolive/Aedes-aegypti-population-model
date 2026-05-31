@@ -215,7 +215,7 @@ int start, end;
 double L_cum, L_cum2, denom, L_avg_gam1, P_emerg_cohort; // expected mean & std dev
 int time_lag;
 
-double dt_shp, dt_scl, prob, L_cohort, P_emerge_today, Pm_gm_emerge_today, Pf_gm_emerge_today; // pupal emergence
+double dt_shp, dt_scl, prob, Pm_emerge_today, Pf_emerge_today, Pm_gm_emerge_today, Pf_gm_emerge_today; // pupal emergence
 
 
 // Create local data containers
@@ -457,18 +457,19 @@ for (int time1=1; time1<maxtime; time1++){
 			}
 			
 			// Convert probability to numbers
-			L_cohort = Lm_cohort[time1-1][cohort] + Lf_cohort[time1-1][cohort]; // total wildtype larvae
-
-			P_emerge_today = L_cohort * prob/non_emerg_prob.at(cohort); // total wildtype
+			Pm_emerge_today = Lm_cohort[time1-1][cohort] * prob/non_emerg_prob.at(cohort);
+			Pf_emerge_today = Lf_cohort[time1-1][cohort] * prob/non_emerg_prob.at(cohort);
 			Pm_gm_emerge_today = Lm_gm_cohort[time1-1][cohort] * prob / non_emerg_prob.at(cohort);
 			Pf_gm_emerge_today = Lf_gm_cohort[time1-1][cohort] * prob / non_emerg_prob.at(cohort);
 			
 			// Sanity checks
-			if (P_emerge_today > L_cohort){P_emerge_today = L_cohort; prob=1;} // prevents more pupae emerging than larvae exist
+			if (Pm_emerge_today > Lm_cohort[time1-1][cohort]){Pm_emerge_today = Lm_cohort[time1-1][cohort]; prob=1;} // prevents more pupae emerging than larvae exist
+			if (Pf_emerge_today > Lf_cohort[time1-1][cohort]){Pf_emerge_today = Lf_cohort[time1-1][cohort]; prob=1;}
 			if (Pm_gm_emerge_today > Lm_gm_cohort[time1-1][cohort]) {Pm_gm_emerge_today = Lm_gm_cohort[time1-1][cohort]; prob=1;}
 			if (Pf_gm_emerge_today > Lf_gm_cohort[time1-1][cohort]) {Pf_gm_emerge_today = Lf_gm_cohort[time1-1][cohort]; prob=1;}
 			
-			if (P_emerge_today<0){P_emerge_today=0; prob=0;} // prevents negative emergence
+			if (Pm_emerge_today<0){Pm_emerge_today=0; prob=0;} // prevents negative emergence
+			if (Pf_emerge_today<0){Pf_emerge_today=0; prob=0;}
 			if (Pm_gm_emerge_today<0){Pm_gm_emerge_today=0; prob=0;}
 			if (Pf_gm_emerge_today<0){Pf_gm_emerge_today=0; prob=0;}
 			
@@ -477,24 +478,24 @@ for (int time1=1; time1<maxtime; time1++){
 			// Updates based on calculations
 			non_emerg_prob.at(cohort) *= (1-prob/non_emerg_prob.at(cohort)); // update probability of not emerging
 	
-			Lm_cohort[time1][cohort] -= sex_ratio * P_emerge_today; // remove emerging larvae from larvae compartment
-            Lf_cohort[time1][cohort] -= (1-sex_ratio) * P_emerge_today;
+			Lm_cohort[time1][cohort] -= Pm_emerge_today; // remove emerging larvae from larvae compartment
+            Lf_cohort[time1][cohort] -= Pf_emerge_today;
 			Lm_gm_cohort[time1][cohort] -= Pm_gm_emerge_today;
 			Lf_gm_cohort[time1][cohort] -= Pf_gm_emerge_today;
 			
-			Pm_emerg_cohort[time1][cohort] = sex_ratio * P_emerge_today; // store emerging pupae by day into each cohort
-			Pf_emerg_cohort[time1][cohort] = (1-sex_ratio) * P_emerge_today;
+			Pm_emerg_cohort[time1][cohort] = Pm_emerge_today; // store emerging pupae by day into each cohort
+			Pf_emerg_cohort[time1][cohort] = Pf_emerge_today;
 			Pm_gm_emerg_cohort[time1][cohort]  = Pm_gm_emerge_today;
 			Pf_gm_emerg_cohort[time1][cohort] = Pf_gm_emerge_today; // stored to monitor how many larvae are removed but not added to pupal compartment below
 
-			P_emerg.at(cohort) += P_emerge_today; // store total number of wildtype/GM pupae that emerged by cohort
+			P_emerg.at(cohort) += Pm_emerge_today + Pf_emerge_today; // store total number of pupae that emerged by cohort
 			P_gm_emerg.at(cohort) += Pm_gm_emerge_today;
 
-			Pm[time1][0] += sex_ratio * P_emerge_today; // add emerging pupae to pupae compartment (males)
-			Pf[time1][0] += (1-sex_ratio) * P_emerge_today;
+			Pm[time1][0] += Pm_emerge_today; // add emerging pupae to pupae compartment (males)
+			Pf[time1][0] += Pf_emerge_today;
 			Pm_gm[time1][0] += Pm_gm_emerge_today;
 
-			dt_mean.at(cohort) += (time1-hdate.at(cohort)) * (P_emerge_today + Pm_gm_emerge_today); // accumulate mean development time
+			dt_mean.at(cohort) += (time1-hdate.at(cohort)) * (Pm_emerge_today + Pf_emerge_today + Pm_gm_emerge_today); // accumulate mean development time
 
 		} // End loop for calculating number of larvae emerging as pupae
 
