@@ -12,6 +12,9 @@ Lf_gm.txt
 Pm_gm_emerg.txt
 Am_gm.txt
 Am_gm_release.txt
+Am_freq.txt
+Am_gm_freq.txt
+Am_gm_release_freq.txt
 0.07
 0.01
 500

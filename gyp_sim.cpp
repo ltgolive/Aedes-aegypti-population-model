@@ -25,7 +25,7 @@ typedef vector<double> Row_Double;
 typedef vector<Row_Double> Matrix_Double;
 
 // Declare functions
-void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& lambda_out, ofstream& Lm_out, ofstream& Lf_out, ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& Am_out, ofstream& Af_out, ofstream& Lm_gm_out, ofstream& Lf_gm_out, ofstream& Pm_gm_emerg_out, ofstream& Am_gm_out , ofstream& Am_gm_release_out);
+void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& lambda_out, ofstream& Lm_out, ofstream& Lf_out, ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& Am_out, ofstream& Af_out, ofstream& Lm_gm_out, ofstream& Lf_gm_out, ofstream& Pm_gm_emerg_out, ofstream& Am_gm_out, ofstream& Am_gm_release_out, ofstream& Am_freq_out, ofstream& Am_gm_freq_out, ofstream& Am_gm_release_freq_out);
 double Run_Model(ofstream& lambda_out);
 
 // Declare global variables
@@ -52,9 +52,10 @@ int main(){
 ofstream cohort_means_out, cohort_stds_out, lambda_out;
 ofstream Lm_out, Lf_out, Pm_emerg_out, Pf_emerg_out, Am_out, Af_out;
 ofstream Lm_gm_out, Lf_gm_out, Pm_gm_emerg_out, Am_gm_out, Am_gm_release_out;
+ofstream Am_freq_out, Am_gm_freq_out, Am_gm_release_freq_out;
 
 // Calls function: read_data
-read_data(cohort_means_out, cohort_stds_out, lambda_out, Lm_out, Lf_out, Pm_emerg_out, Pf_emerg_out, Am_out, Af_out, Lm_gm_out, Lf_gm_out, Pm_gm_emerg_out, Am_gm_out, Am_gm_release_out);
+read_data(cohort_means_out, cohort_stds_out, lambda_out, Lm_out, Lf_out, Pm_emerg_out, Pf_emerg_out, Am_out, Af_out, Lm_gm_out, Lf_gm_out, Pm_gm_emerg_out, Am_gm_out, Am_gm_release_out, Am_freq_out, Am_gm_freq_out, Am_gm_release_freq_out);
 
 // Calls function: Run_Model - calls in output file streams that need to be written to during the simulation rather than after
 Run_Model(lambda_out);
@@ -82,6 +83,10 @@ for (int j=0; j<maxtime; j++) {
 	Af_out << Af.at(j) << " ";
     Am_gm_out << Am_gm.at(j) << " ";
     Am_gm_release_out << Am_gm_release.at(j) << " ";
+
+	Am_freq_out << Am_freq.at(j) << " ";
+	Am_gm_freq_out << Am_gm_freq.at(j) << " ";
+	Am_gm_release_freq_out << Am_gm_release_freq.at(j) << " ";
 }
 Lm_out << endl; 
 Lf_out << endl;
@@ -97,6 +102,10 @@ Af_out << endl;
 Am_gm_out << endl;
 Am_gm_release_out << endl;
 
+Am_freq_out << endl;
+Am_gm_freq_out << endl;
+Am_gm_release_freq_out << endl;
+
 return 0;
 
 }
@@ -104,7 +113,7 @@ return 0;
 //------------------------------------------- READ DATA function -------------------------------------------
 
 // Call in input and output files
-void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& lambda_out, ofstream& Lm_out, ofstream& Lf_out, ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& Am_out, ofstream& Af_out, ofstream& Lm_gm_out, ofstream& Lf_gm_out, ofstream& Pm_gm_emerg_out, ofstream& Am_gm_out, ofstream& Am_gm_release_out){
+void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& lambda_out, ofstream& Lm_out, ofstream& Lf_out, ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& Am_out, ofstream& Af_out, ofstream& Lm_gm_out, ofstream& Lf_gm_out, ofstream& Pm_gm_emerg_out, ofstream& Am_gm_out, ofstream& Am_gm_release_out, ofstream& Am_freq_out, ofstream& Am_gm_freq_out, ofstream& Am_gm_release_freq_out){
 
 // Read in hatch dates
 ifstream hdate_data;
@@ -117,14 +126,16 @@ hdate_data >> hdate.at(i);
 string cohort_means_file, cohort_stds_file, lambda_file;
 string Lm_file, Lf_file, Pm_emerg_file, Pf_emerg_file, Am_file, Af_file;
 string Lm_gm_file, Lf_gm_file, Pm_gm_emerg_file, Am_gm_file, Am_gm_release_file;
+string Am_freq_file, Am_gm_freq_file, Am_gm_release_freq_file;
 
-cin >> cohort_means_file >> cohort_stds_file >> lambda_file >> Lm_file >> Lf_file >> Pm_emerg_file >> Pf_emerg_file >> Am_file >> Af_file >> Lm_gm_file >> Lf_gm_file >> Pm_gm_emerg_file >> Am_gm_file >> Am_gm_release_file;
+cin >> cohort_means_file >> cohort_stds_file >> lambda_file >> Lm_file >> Lf_file >> Pm_emerg_file >> Pf_emerg_file >> Am_file >> Af_file >> Lm_gm_file >> Lf_gm_file >> Pm_gm_emerg_file >> Am_gm_file >> Am_gm_release_file >> Am_freq_file >> Am_gm_freq_file >> Am_gm_release_freq_file;
 
 // Print file names to console
 cout << " cohort_means_file " << cohort_means_file << " cohort_stds_file " << cohort_stds_file << " lambda_file " << lambda_file << endl;
 cout << " Lm_file " << Lm_file << " Lf_file " << Lf_file << " Lm_gm_file " << Lm_gm_file << " Lf_gm_file " << Lf_gm_file << endl;
 cout << " Pm_emerg_file " << Pm_emerg_file << " Pf_emerg_file " << Pf_emerg_file << " Pm_gm_emerg_file " << Pm_gm_emerg_file << endl;
 cout << " Am_file " << Am_file << " Af_file " << Af_file << " Am_gm_file " << Am_gm_file << " Am_gm_release_file " << Am_gm_release_file << endl;
+cout << " Am_freq_file " << Am_freq_file << " Am_gm_freq_file " << Am_gm_freq_file << " Am_gm_release_freq_file " << Am_gm_release_freq_file << endl;
 
 // Output files
 cohort_means_out.open(cohort_means_file); // mean development times per cohort
@@ -147,6 +158,10 @@ Pm_gm_emerg_out.open(Pm_gm_emerg_file);
   
 Am_gm_out.open(Am_gm_file);                
 Am_gm_release_out.open(Am_gm_release_file);
+
+Am_freq_out.open(Am_freq_file);
+Am_gm_freq_out.open(Am_gm_freq_file);
+Am_gm_release_freq_out.open(Am_gm_release_freq_file);
 
 // Read in key parameter values in inits file and print to check correctly read
 cin >> costA;
