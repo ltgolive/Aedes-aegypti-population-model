@@ -37,9 +37,9 @@ int release_size, release_day;
 // Declare global data containers
 vector<float> dt_mean(no_cohorts), dt_std(no_cohorts), A_ovipos(maxtime);
 vector<double> Lm(maxtime), Pm_emerg(maxtime), Am(maxtime), Am_mate(maxtime), Lf(maxtime), Pf_emerg(maxtime), Af(maxtime), Af_mate(maxtime); // wildtype
-Matrix_Double Pm(maxtime, Row_Double(3)), Pf(maxtime, Row_Double(3)); // wildtype
+Matrix_Double Pm(maxtime, Row_Double(2)), Pf(maxtime, Row_Double(2)); // wildtype
 vector<double> Lm_gm(maxtime), Pm_gm_emerg(maxtime), Am_gm(maxtime), Am_gm_mate(maxtime), Am_gm_release(maxtime), Am_gm_release_mate(maxtime), Lf_gm(maxtime); // GM
-Matrix_Double Pm_gm(maxtime, Row_Double(3)); // GM
+Matrix_Double Pm_gm(maxtime, Row_Double(2)); // GM
 vector<double> Am_freq(maxtime), Am_gm_freq(maxtime), Am_gm_release_freq(maxtime);
 vector<int> hdate(no_cohorts);
 
@@ -222,8 +222,6 @@ int cohort_age_max = 100; // cohorts older than 100 days are ignored
 // Temporary variables
 int max_cohort, min_cohort; // active cohorts
 
-double Am_total; // mating equation
-
 double L_avg_f, lambda1; // hatching larvae/fecundity
 int start, end; 
 
@@ -231,6 +229,8 @@ double L_cum, L_cum2, denom, L_avg_gam1, P_emerg_cohort; // expected mean & std 
 int time_lag;
 
 double dt_shp, dt_scl, prob, Pm_emerge_today, Pf_emerge_today, Pm_gm_emerge_today, Pf_gm_emerge_today; // pupal emergence
+
+double Am_total; // mating equation
 
 
 // Create local data containers
@@ -291,8 +291,8 @@ for (int i=0; i<maxtime; i++) {
     Am_gm_freq.at(i) = 0.0;
     Am_gm_release_freq.at(i) = 0.0;
 	
-	// With 3 columns, one for each pupal stage (0-2 days)
-	for (int j=0; j<3; j++){ 
+	// With 2 columns, one for each pupal stage (0-2 days)
+	for (int j=0; j<2; j++){ 
 		Pm[i][j] = 0.0; // number of pupae
 		Pf[i][j] = 0.0; 
 		Pm_gm[i][j] = 0.0; 
@@ -503,7 +503,7 @@ for (int time1=1; time1<maxtime; time1++){
 			Pm_gm_emerg_cohort[time1][cohort]  = Pm_gm_emerge_today;
 			Pf_gm_emerg_cohort[time1][cohort] = Pf_gm_emerge_today; // stored to monitor how many larvae are removed but not added to pupal compartment below
 
-			P_emerg.at(cohort) += Pm_emerge_today + Pf_emerge_today; // store total number of pupae that emerged by cohort
+			P_emerg.at(cohort) += Pm_emerge_today + Pf_emerge_today; // store total number of WT pupae that emerged by cohort
 			P_gm_emerg.at(cohort) += Pm_gm_emerge_today;
 
 			Pm[time1][0] += Pm_emerge_today; // add emerging pupae to pupae compartment (males)
@@ -545,7 +545,7 @@ for (int time1=1; time1<maxtime; time1++){
 
 	Am_gm[time1] += Pm_gm[time1-1][1] * survA;
 
-	// Release event (once weekly for 3 months i.e. 12 releases)
+	// Release event
 	for (int r = 0; r < 12; r++){ // number of releases/weeks
     if (time1 == release_day + r * 7){ // check if today is a release day
         Am_gm_release.at(time1) += release_size; // same release size every time
