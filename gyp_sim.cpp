@@ -32,7 +32,7 @@ double Run_Model(ofstream& lambda_out);
 const int no_cohorts = 1000; // number of mosquito cohorts
 const int maxtime = 2500; // simulation length (days; ~7 years)
 double costA, costL;
-int release_size, release_day;
+int release_size, release_day, release_period;
 
 // Declare global data containers
 vector<float> dt_mean(no_cohorts), dt_std(no_cohorts);
@@ -169,11 +169,13 @@ cin >> costA;
 cin >> costL;
 cin >> release_size;
 cin >> release_day;
+cin >> release_period;
 
 cout << "costA " << costA << " (additional density-INdependent daily mortality experienced by adults in the field environment) " << endl;
 cout << "costL " << costL << " (additional density-INdependent daily mortality experienced by larvae in the field environment) " << endl;
 cout << "Release size: " << release_size << endl;
 cout << "Release day: " << release_day << endl;
+cout << "Release period: " << release_period << " weeks" <<endl;
 }
 
 //------------------------------------------- RUN MODEL function -------------------------------------------
@@ -215,6 +217,11 @@ double dt_std_max = 40; // if crowding is extreme, std dev development time is c
 double dt_std_min = 1.0; // if crowding is minimal, std dev development time is capped at ±1 day from mean
 
 int L_max = 4200; // the larval density above which the above caps on development time kick in
+
+// Mating competitiveness
+double comp_wt = 1.0;
+double comp_gm = 1.0;
+double comp_rel = 1.0;
 
 // Other
 double sex_ratio = 0.5; 
@@ -545,7 +552,7 @@ for (int time1=1; time1<maxtime; time1++){
 	Am_gm[time1] += Pm_gm[time1-1][1] * survA;
 
 	// Release event
-	for (int r = 0; r < 20; r++){ // number of releases/weeks
+	for (int r = 0; r < release_period; r++){ // number of releases/weeks
     if (time1 == release_day + r * 7){ // check if today is a release day
         Am_gm_release.at(time1) += release_size; // same release size every time
     }
@@ -562,12 +569,12 @@ for (int time1=1; time1<maxtime; time1++){
 	}
 
 	// Calculate frequency of each male type 
-	Am_total = Am_mate.at(time1) + Am_gm_mate.at(time1) + Am_gm_release_mate.at(time1);
+	Am_total = (comp_wt * Am_mate.at(time1)) + (comp_gm * Am_gm_mate.at(time1)) + (comp_rel * Am_gm_release_mate.at(time1));
 
 	if (Am_total > 0.0){ 
-		Am_gm_release_freq.at(time1) = Am_gm_release_mate.at(time1) / Am_total; // % released GM males
-		Am_gm_freq.at(time1) 		 = Am_gm_mate.at(time1) 		/ Am_total; // % second generation GM males
-		Am_freq.at(time1) 			 = 1.0 - Am_gm_freq.at(time1) - Am_gm_release_freq.at(time1); // % wildtype males
+		Am_gm_release_freq.at(time1) = (comp_rel * Am_gm_release_mate.at(time1)) / Am_total; // % released GM males
+		Am_gm_freq.at(time1) 		 = (comp_gm  * Am_gm_mate.at(time1)) 	     / Am_total; // % second generation GM males
+		Am_freq.at(time1) 			 = (comp_wt  * Am_mate.at(time1)) 	         / Am_total; // % wildtype males
 	} else {
     	Am_freq.at(time1) = 0.0; // no males present (allows for crashing of the population - wider edits needed for crashing to be fully possible)
     	Am_gm_freq.at(time1) = 0.0;
@@ -587,15 +594,6 @@ for (int time1=1; time1<maxtime; time1++){
 		A_ovipos_wt.at(time1)  += Af_new * Am_freq.at(time1);
     	A_ovipos_gm.at(time1)  += Af_new * Am_gm_freq.at(time1);
     	A_ovipos_rel.at(time1) += Af_new * Am_gm_release_freq.at(time1);
-	}
-
-	// Debug output - print to console for first 20 days
-	if (time1 <= 50){
-    cout << "Day " << time1 
-         << " | Af: "          << Af.at(time1)
-         << " | A_ovipos_wt: " << A_ovipos_wt.at(time1)
-         << " | Am_freq: "     << Am_freq.at(time1)
-         << endl;
 	}
 	
 } // End time loop

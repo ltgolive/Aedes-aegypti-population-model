@@ -19,3 +19,4 @@ Am_gm_release_freq.txt
 0.01
 600
 700
+20
