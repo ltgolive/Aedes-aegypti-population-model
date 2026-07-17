@@ -41,7 +41,7 @@ Matrix_Double Pm(maxtime, Row_Double(2)), Pf(maxtime, Row_Double(2)); // wildtyp
 vector<double> Lm_gm(maxtime), Pm_gm_emerg(maxtime), Am_gm(maxtime), Am_gm_mate(maxtime), Am_gm_release(maxtime), Am_gm_release_mate(maxtime), Lf_gm(maxtime); // GM
 Matrix_Double Pm_gm(maxtime, Row_Double(2)); // GM
 vector<double> Am_freq(maxtime), Am_gm_freq(maxtime), Am_gm_release_freq(maxtime);
-vector<double> A_ovipos_wt(maxtime), A_ovipos_gm(maxtime), A_ovipos_rel(maxtime);
+vector<double> Af_mated_wt(maxtime), Af_mated_gm(maxtime), Af_mated_rel(maxtime);
 vector<int> hdate(no_cohorts);
 
 
@@ -220,8 +220,8 @@ int L_max = 4200; // the larval density above which the above caps on developmen
 
 // Mating competitiveness
 double comp_wt = 1.0;
-double comp_gm = 1.0;
-double comp_rel = 1.0;
+double comp_gm = 0.5;
+double comp_rel = 0.05;
 
 // Other
 double sex_ratio = 0.5; 
@@ -284,9 +284,9 @@ for (int i=0; i<maxtime; i++) {
 	Pf_emerg.at(i) = 0.0; 
 	Pm_gm_emerg.at(i) = 0.0;
 
-	A_ovipos_wt.at(i)  = 0.0; // number of females ready to lay eggs by mating group
-	A_ovipos_gm.at(i)  = 0.0;
-	A_ovipos_rel.at(i) = 0.0;
+	Af_mated_wt.at(i)  = 0.0; // number of females ready to lay eggs by mating group
+	Af_mated_gm.at(i)  = 0.0;
+	Af_mated_rel.at(i) = 0.0;
 	 
 	Am_gm.at(i) = 0.0; // number of adults
 	Am_gm_release.at(i) = 0.0;
@@ -295,7 +295,7 @@ for (int i=0; i<maxtime; i++) {
 	Am_gm_mate.at(i) = 0.0;
 	Am_gm_release_mate.at(i) = 0.0;
 
-	Am_freq.at(i) = 1.0; // frequency of males ready to mate
+	Am_freq.at(i) = 0.0; // frequency of males ready to mate
     Am_gm_freq.at(i) = 0.0;
     Am_gm_release_freq.at(i) = 0.0;
 	
@@ -394,11 +394,11 @@ for (int time1=1; time1<maxtime; time1++){
 			// Calculate number of new larvae hatching today
  			if (time1>tlagh+tlagg+tlagm){ // prevents hatching from happening until enough time has passed for first adults in simulation to lay eggs
 				
-				Lm_cohort[time1][cohort] = sex_ratio 	 * lambda1 * A_ovipos_wt.at(time1 - tlagh);
-				Lf_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * A_ovipos_wt.at(time1 - tlagh);	
+				Lm_cohort[time1][cohort] = sex_ratio 	 * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA, tlagh+tlagg);
+				Lf_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA, tlagh+tlagg);	
 
-				Lm_gm_cohort[time1][cohort] = sex_ratio 	* lambda1 * A_ovipos_rel.at(time1 - tlagh);	
-				Lf_gm_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * A_ovipos_rel.at(time1 - tlagh);
+				Lm_gm_cohort[time1][cohort] = sex_ratio 	* lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA, tlagh+tlagg);	
+				Lf_gm_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA, tlagh+tlagg);
 			}
 
 		} // End loop for newly hatching larvae	
@@ -558,6 +558,19 @@ for (int time1=1; time1<maxtime; time1++){
     }
 	}
 
+	// Calculate observed male frequencies (different from mating frequencies due to time lag and mating competitiveness)
+	double Am_total_obs = Am.at(time1) + Am_gm.at(time1) + Am_gm_release.at(time1);
+
+	if (Am_total_obs > 0.0){
+    	Am_freq.at(time1)             = Am.at(time1)             / Am_total_obs;
+    	Am_gm_freq.at(time1)          = Am_gm.at(time1)          / Am_total_obs;
+    	Am_gm_release_freq.at(time1)  = Am_gm_release.at(time1)  / Am_total_obs;
+	} else {
+    	Am_freq.at(time1)             = 0.0;
+    	Am_gm_freq.at(time1)          = 0.0;
+    	Am_gm_release_freq.at(time1)  = 0.0;
+	}
+
 
 	//--------------------------------------------- Mating -------------------------------------------- 
 
@@ -568,32 +581,34 @@ for (int time1=1; time1<maxtime; time1++){
     	Am_gm_release_mate[time1] = Am_gm_release[time1-tlagm] * pow(survA, tlagm-1);
 	}
 
-	// Calculate frequency of each male type 
+	// Calculate mating frequencies by male type
 	Am_total = (comp_wt * Am_mate.at(time1)) + (comp_gm * Am_gm_mate.at(time1)) + (comp_rel * Am_gm_release_mate.at(time1));
 
-	if (Am_total > 0.0){ 
-		Am_gm_release_freq.at(time1) = (comp_rel * Am_gm_release_mate.at(time1)) / Am_total; // % released GM males
-		Am_gm_freq.at(time1) 		 = (comp_gm  * Am_gm_mate.at(time1)) 	     / Am_total; // % second generation GM males
-		Am_freq.at(time1) 			 = (comp_wt  * Am_mate.at(time1)) 	         / Am_total; // % wildtype males
+	double Am_f_wt, Am_f_gm, Am_f_rel;
+	if (Am_total > 0.0){
+    	Am_f_wt  = (comp_wt  * Am_mate.at(time1))             / Am_total;
+    	Am_f_gm  = (comp_gm  * Am_gm_mate.at(time1))          / Am_total;
+    	Am_f_rel = (comp_rel * Am_gm_release_mate.at(time1))  / Am_total;
 	} else {
-    	Am_freq.at(time1) = 0.0; // no males present (allows for crashing of the population - wider edits needed for crashing to be fully possible)
-    	Am_gm_freq.at(time1) = 0.0;
-    	Am_gm_release_freq.at(time1) = 0.0;
+    	Am_f_wt  = 0.0;
+    	Am_f_gm  = 0.0;
+    	Am_f_rel = 0.0;
 	}
 
 	// Calculate number of ovipositing females alive today by type
-	A_ovipos_wt.at(time1)  = A_ovipos_wt.at(time1-1)  * survA;
-	A_ovipos_gm.at(time1)  = A_ovipos_gm.at(time1-1)  * survA;
-	A_ovipos_rel.at(time1) = A_ovipos_rel.at(time1-1) * survA;
+	Af_mated_wt.at(time1)  = Af_mated_wt.at(time1-1)  * survA;
+	Af_mated_gm.at(time1)  = Af_mated_gm.at(time1-1)  * survA;
+	Af_mated_rel.at(time1) = Af_mated_rel.at(time1-1) * survA;
 
 	// Calculate number of adult females ready to lay eggs by type
 	if (time1>=tlagm+tlagg) { // adult males need to be ready to mate, then females need to be ready to lay eggs after mating
-		double Af_new = Af.at(time1) - A_ovipos_wt.at(time1) - A_ovipos_gm.at(time1) - A_ovipos_rel.at(time1); // new mating-ready females
+		double Af_eligible = Af.at(time1-tlagf) * pow(survA, tlagf); // only females that emerged tlagf days ago
+		double Af_new = Af_eligible - Af_mated_wt.at(time1) - Af_mated_gm.at(time1) - Af_mated_rel.at(time1); // new mating-ready females
 		Af_new = max(0.0, Af_new);
 
-		A_ovipos_wt.at(time1)  += Af_new * Am_freq.at(time1);
-    	A_ovipos_gm.at(time1)  += Af_new * Am_gm_freq.at(time1);
-    	A_ovipos_rel.at(time1) += Af_new * Am_gm_release_freq.at(time1);
+		Af_mated_wt.at(time1)  += Af_new * Am_f_wt;
+    	Af_mated_gm.at(time1)  += Af_new * Am_f_gm;
+    	Af_mated_rel.at(time1) += Af_new * Am_f_rel;
 	}
 	
 } // End time loop
