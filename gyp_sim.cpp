@@ -33,12 +33,16 @@ const int no_cohorts = 1000; // number of mosquito cohorts
 const int maxtime = 2500; // simulation length (days; ~7 years)
 double costA, costL;
 int release_size, release_day, release_period;
+int tlagh, tlagg;
+double lambda_intc, lambda_alpha;
+double dt_mean_intc, dt_mean_alpha, dt_mean_exp;
+double dt_std_intc, dt_std_alpha, dt_std_exp;
 
 // Declare global data containers
 vector<float> dt_mean(no_cohorts), dt_std(no_cohorts);
-vector<double> Lm(maxtime), Pm_emerg(maxtime), Am(maxtime), Am_mate(maxtime), Lf(maxtime), Pf_emerg(maxtime), Af(maxtime); // wildtype
+vector<double> Lm(maxtime), Pm_emerg(maxtime), Am(maxtime), Lf(maxtime), Pf_emerg(maxtime), Af(maxtime); // wildtype
 Matrix_Double Pm(maxtime, Row_Double(2)), Pf(maxtime, Row_Double(2)); // wildtype
-vector<double> Lm_gm(maxtime), Pm_gm_emerg(maxtime), Am_gm(maxtime), Am_gm_mate(maxtime), Am_gm_release(maxtime), Am_gm_release_mate(maxtime), Lf_gm(maxtime); // GM
+vector<double> Lm_gm(maxtime), Pm_gm_emerg(maxtime), Am_gm(maxtime), Am_gm_release(maxtime), Lf_gm(maxtime); // GM
 Matrix_Double Pm_gm(maxtime, Row_Double(2)); // GM
 vector<double> Am_freq(maxtime), Am_gm_freq(maxtime), Am_gm_release_freq(maxtime);
 vector<double> Af_mated_wt(maxtime), Af_mated_gm(maxtime), Af_mated_rel(maxtime);
@@ -165,14 +169,20 @@ Am_gm_freq_out.open(Am_gm_freq_file);
 Am_gm_release_freq_out.open(Am_gm_release_freq_file);
 
 // Read in key parameter values in inits file and print to check correctly read
-cin >> costA;
-cin >> costL;
-cin >> release_size;
-cin >> release_day;
-cin >> release_period;
+cin >> costA >> costL;
+cin >> tlagh >> tlagg;
+cin >> lambda_intc >> lambda_alpha;
+cin >> dt_mean_intc >> dt_mean_alpha >> dt_mean_exp;
+cin >> dt_std_intc >> dt_std_alpha >> dt_std_exp;
+cin >> release_size >> release_day >> release_period;
 
-cout << "costA " << costA << " (additional density-INdependent daily mortality experienced by adults in the field environment) " << endl;
-cout << "costL " << costL << " (additional density-INdependent daily mortality experienced by larvae in the field environment) " << endl;
+cout << "Additional density-independent daily mortality experienced by adults in the field: " << costA << endl;
+cout << "Additional density-independent daily mortality experienced by larvae in the field: " << costL << endl;
+cout << "Time lags: " << "tlagh: " << tlagh << " tlagg: " << tlagg << endl;
+cout << "Density-dependent parameters:" << endl;
+cout << "Fecundity: " << "lambda_intc: " << lambda_intc << " lambda_alpha: " << lambda_alpha << endl;
+cout << "Development time (mean): " << "dt_mean_intc: " << dt_mean_intc << " dt_mean_alpha: " << dt_mean_alpha << " dt_mean_exp: " << dt_mean_exp << endl;
+cout << "Development time (std): " << "dt_std_intc: " << dt_std_intc << " dt_std_alpha: " << dt_std_alpha << " dt_std_exp: " << dt_std_exp << endl;
 cout << "Release size: " << release_size << endl;
 cout << "Release day: " << release_day << endl;
 cout << "Release period: " << release_period << " weeks" <<endl;
@@ -184,10 +194,8 @@ cout << "Release period: " << release_period << " weeks" <<endl;
 double Run_Model(ofstream& lambda_out){
 
 // Time lags
-int tlagh = 5; // oviposition to egg hatching
 int tlagl = 21; // time over which larval density is averaged
 int tlagp = 2; // pupal development time
-int tlagg = 4; // emerging as adults to being ready to lay eggs (females)
 int tlagm = 2; // emerging as adults and being ready to mate (males)
 int tlagf = 1; // emerging as adults and being ready to mate (females)
 
@@ -196,32 +204,20 @@ double survA = 1-0.03-costA; // daily survival rate of adults - base mortality i
 double survL = 0.95-costL; // daily survival rate of larvae
 double survLf_gm = survL; // daily survival rate of GM female larvae
 
-// Fecundity (log-linear relationship)
-double lambda_intc = 28.0; // intercept (a)
-double lambda_alpha = -3.3; // slope (b)
+// Fecundity caps (log-linear relationship)
+double lambda_max = 14; 
+double lambda_min = 0.5;
 
-double lambda_max = 14; // a female can lay at most 14 eggs per day
-double lambda_min = 0.5; // a female lays at least 0.5 eggs per day even under very crowded conditions
-
-// Pupal emergence (gamma distribution)
-double dt_mean_intc = 1.8; // mean larval development time - intercept (alpha)
-double dt_mean_alpha = 0.536; // mean larval development time - amplitude/height (beta)
-double dt_mean_exp = 0.533; // mean larval development time - exponent/slope (gamma)
-
-double dt_std_intc = 0.22; // std dev larval development time - intercept (alpha)
-double dt_std_alpha = 0.0168; // std dev larval development time - amplitude/height (beta)
-double dt_std_exp = 0.867; // std dev larval development time - exponent/slope (gamma)
-
+// Pupal emergence caps (gamma distribution)
 double dt_mean_max = 60; // if crowding is extreme, mean development time is capped at 60 days
 double dt_std_max = 40; // if crowding is extreme, std dev development time is capped at ±60 days from mean
 double dt_std_min = 1.0; // if crowding is minimal, std dev development time is capped at ±1 day from mean
-
 int L_max = 4200; // the larval density above which the above caps on development time kick in
 
 // Mating competitiveness
 double comp_wt = 1.0;
-double comp_gm = 0.5;
-double comp_rel = 0.05;
+double comp_gm = 1.0;
+double comp_rel = 1.0;
 
 // Other
 double sex_ratio = 0.5; 
@@ -237,8 +233,6 @@ double L_cum, L_cum2, denom, L_avg_gam1, P_emerg_cohort; // expected mean & std 
 int time_lag;
 
 double dt_shp, dt_scl, prob, Pm_emerge_today, Pf_emerge_today, Pm_gm_emerge_today, Pf_gm_emerge_today; // pupal emergence
-
-double Am_total; // mating equation
 
 
 // Create local data containers
@@ -290,10 +284,6 @@ for (int i=0; i<maxtime; i++) {
 	 
 	Am_gm.at(i) = 0.0; // number of adults
 	Am_gm_release.at(i) = 0.0;
-
-	Am_mate.at(i) = 0.0; // adults ready to mate (subset from above)
-	Am_gm_mate.at(i) = 0.0;
-	Am_gm_release_mate.at(i) = 0.0;
 
 	Am_freq.at(i) = 0.0; // frequency of males ready to mate
     Am_gm_freq.at(i) = 0.0;
@@ -394,11 +384,12 @@ for (int time1=1; time1<maxtime; time1++){
 			// Calculate number of new larvae hatching today
  			if (time1>tlagh+tlagg+tlagm){ // prevents hatching from happening until enough time has passed for first adults in simulation to lay eggs
 				
-				Lm_cohort[time1][cohort] = sex_ratio 	 * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA, tlagh+tlagg);
-				Lf_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA, tlagh+tlagg);	
+				Lm_cohort[time1][cohort] = sex_ratio 	 * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA, tlagg);
+				Lf_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA, tlagg);	
 
-				Lm_gm_cohort[time1][cohort] = sex_ratio 	* lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA, tlagh+tlagg);	
-				Lf_gm_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA, tlagh+tlagg);
+				Lm_gm_cohort[time1][cohort] = sex_ratio 	* lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA, tlagg);	
+				Lf_gm_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA, tlagg);
+				
 			}
 
 		} // End loop for newly hatching larvae	
@@ -559,56 +550,60 @@ for (int time1=1; time1<maxtime; time1++){
 	}
 
 	// Calculate observed male frequencies (different from mating frequencies due to time lag and mating competitiveness)
-	double Am_total_obs = Am.at(time1) + Am_gm.at(time1) + Am_gm_release.at(time1);
+	double Am_total_obs = Am[time1] + Am_gm[time1] + Am_gm_release[time1];
 
 	if (Am_total_obs > 0.0){
-    	Am_freq.at(time1)             = Am.at(time1)             / Am_total_obs;
-    	Am_gm_freq.at(time1)          = Am_gm.at(time1)          / Am_total_obs;
-    	Am_gm_release_freq.at(time1)  = Am_gm_release.at(time1)  / Am_total_obs;
+    	Am_freq[time1]             = Am[time1]             / Am_total_obs;
+    	Am_gm_freq[time1]          = Am_gm[time1]          / Am_total_obs;
+    	Am_gm_release_freq[time1]  = Am_gm_release[time1]  / Am_total_obs;
 	} else {
-    	Am_freq.at(time1)             = 0.0;
-    	Am_gm_freq.at(time1)          = 0.0;
-    	Am_gm_release_freq.at(time1)  = 0.0;
+    	Am_freq[time1]             = 0.0;
+    	Am_gm_freq[time1]          = 0.0;
+    	Am_gm_release_freq[time1]  = 0.0;
 	}
 
 
 	//--------------------------------------------- Mating -------------------------------------------- 
 
-	// Calculate number of adult males ready to mate
-	if (time1>=tlagm){ // adult males must be at least 2 days old to be able to mate
-    	Am_mate[time1] = Am[time1-tlagm] * pow(survA, tlagm-1);
-    	Am_gm_mate[time1] = Am_gm[time1-tlagm] * pow(survA, tlagm-1);
-    	Am_gm_release_mate[time1] = Am_gm_release[time1-tlagm] * pow(survA, tlagm-1);
-	}
 
 	// Calculate mating frequencies by male type
-	Am_total = (comp_wt * Am_mate.at(time1)) + (comp_gm * Am_gm_mate.at(time1)) + (comp_rel * Am_gm_release_mate.at(time1));
+	double Am_freq_wt, Am_freq_gm, Am_freq_rel;
+	if (time1>=tlagm){ // adult males must be at least 2 days old to be able to mate
+    	
+		// Number of adult males ready to mate (male adults alive 2 days ago still alive today)
+		double Am_mate = comp_wt * (Am[time1-tlagm] * pow(survA, tlagm));
+    	double Am_gm_mate = comp_gm * (Am_gm[time1-tlagm] * pow(survA, tlagm));
+    	double Am_gm_release_mate = comp_rel * (Am_gm_release[time1-tlagm] * pow(survA, tlagm));
 
-	double Am_f_wt, Am_f_gm, Am_f_rel;
-	if (Am_total > 0.0){
-    	Am_f_wt  = (comp_wt  * Am_mate.at(time1))             / Am_total;
-    	Am_f_gm  = (comp_gm  * Am_gm_mate.at(time1))          / Am_total;
-    	Am_f_rel = (comp_rel * Am_gm_release_mate.at(time1))  / Am_total;
-	} else {
-    	Am_f_wt  = 0.0;
-    	Am_f_gm  = 0.0;
-    	Am_f_rel = 0.0;
+		// Total males ready to mate
+		double Am_total = Am_mate + Am_gm_mate + Am_gm_release_mate;
+
+		// Calculate mating frequencies
+		if (Am_total > 0.0){
+    		Am_freq_wt  = Am_mate             / Am_total;
+    		Am_freq_gm  = Am_gm_mate          / Am_total;
+    		Am_freq_rel = Am_gm_release_mate  / Am_total;
+		} else {
+    		Am_freq_wt  = 0.0;
+    		Am_freq_gm  = 0.0;
+    		Am_freq_rel = 0.0;
+		}
 	}
 
-	// Calculate number of ovipositing females alive today by type
-	Af_mated_wt.at(time1)  = Af_mated_wt.at(time1-1)  * survA;
-	Af_mated_gm.at(time1)  = Af_mated_gm.at(time1-1)  * survA;
-	Af_mated_rel.at(time1) = Af_mated_rel.at(time1-1) * survA;
+	// Calculate number of ovipositing females alive today 
+	Af_mated_wt[time1]  = Af_mated_wt[time1-1]  * survA;
+	Af_mated_gm[time1]  = Af_mated_gm[time1-1]  * survA;
+	Af_mated_rel[time1] = Af_mated_rel[time1-1] * survA;
 
-	// Calculate number of adult females ready to lay eggs by type
+	// Calculate new adult females ready to lay eggs 
 	if (time1>=tlagm+tlagg) { // adult males need to be ready to mate, then females need to be ready to lay eggs after mating
-		double Af_eligible = Af.at(time1-tlagf) * pow(survA, tlagf); // only females that emerged tlagf days ago
-		double Af_new = Af_eligible - Af_mated_wt.at(time1) - Af_mated_gm.at(time1) - Af_mated_rel.at(time1); // new mating-ready females
-		Af_new = max(0.0, Af_new);
+		double Af_mate = Af[time1-tlagf] * pow(survA, tlagf); // females ready to mate (i.e. females alive 5 days ago that were still alive the next day)
+		double Af_unmated = Af_mate - Af_mated_wt[time1] - Af_mated_gm[time1] - Af_mated_rel[time1]; // unmated females ready to mate 4 days ago 
+		Af_unmated = max(0.0, Af_unmated);
 
-		Af_mated_wt.at(time1)  += Af_new * Am_f_wt;
-    	Af_mated_gm.at(time1)  += Af_new * Am_f_gm;
-    	Af_mated_rel.at(time1) += Af_new * Am_f_rel;
+		Af_mated_wt[time1] += Af_unmated * Am_freq_wt;
+		Af_mated_gm[time1] += Af_unmated * Am_freq_gm;
+		Af_mated_rel[time1] += Af_unmated * Am_freq_rel;
 	}
 	
 } // End time loop
