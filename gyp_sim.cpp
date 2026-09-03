@@ -31,9 +31,9 @@ double Run_Model(ofstream& lambda_out);
 // Declare global variables
 const int no_cohorts = 1000; // number of mosquito cohorts
 const int maxtime = 2500; // simulation length (days; ~7 years)
-double costA, costL;
 int release_size, release_day, release_period;
-int tlagh, tlagg;
+double survA_wt, survA_rel_perc, survA_gm_perc;
+double survL_wt, survL_gm_perc;
 double lambda_intc, lambda_alpha;
 double dt_mean_intc, dt_mean_alpha, dt_mean_exp;
 double dt_std_intc, dt_std_alpha, dt_std_exp;
@@ -169,16 +169,15 @@ Am_gm_freq_out.open(Am_gm_freq_file);
 Am_gm_release_freq_out.open(Am_gm_release_freq_file);
 
 // Read in key parameter values in inits file and print to check correctly read
-cin >> costA >> costL;
-cin >> tlagh >> tlagg;
+cin >> survA_wt >> survA_gm_perc >> survA_rel_perc;
+cin >> survL_wt >> survL_gm_perc;
 cin >> lambda_intc >> lambda_alpha;
 cin >> dt_mean_intc >> dt_mean_alpha >> dt_mean_exp;
 cin >> dt_std_intc >> dt_std_alpha >> dt_std_exp;
 cin >> release_size >> release_day >> release_period;
 
-cout << "Additional density-independent daily mortality experienced by adults in the field: " << costA << endl;
-cout << "Additional density-independent daily mortality experienced by larvae in the field: " << costL << endl;
-cout << "Time lags: " << "tlagh: " << tlagh << " tlagg: " << tlagg << endl;
+cout << "Adult daily survival: WT: " << survA_wt << " 2nd-gen: " << survA_gm_perc << " Released: " << survA_rel_perc << endl;
+cout << "Larval daily survival: WT: " << survL_wt << " 2nd-gen: " << survL_gm_perc << endl;
 cout << "Density-dependent parameters:" << endl;
 cout << "Fecundity: " << "lambda_intc: " << lambda_intc << " lambda_alpha: " << lambda_alpha << endl;
 cout << "Development time (mean): " << "dt_mean_intc: " << dt_mean_intc << " dt_mean_alpha: " << dt_mean_alpha << " dt_mean_exp: " << dt_mean_exp << endl;
@@ -194,15 +193,17 @@ cout << "Release period: " << release_period << " weeks" <<endl;
 double Run_Model(ofstream& lambda_out){
 
 // Time lags
+int tlagh = 5; // oviposition to egg hatching
 int tlagl = 21; // time over which larval density is averaged
 int tlagp = 2; // pupal development time
+int tlagg = 4; // mating to oviposition
 int tlagm = 2; // emerging as adults and being ready to mate (males)
 int tlagf = 1; // emerging as adults and being ready to mate (females)
 
 // Mortality
-double survA = 1-0.03-costA; // daily survival rate of adults - base mortality is 3% per day, plus any additional cost (costA)
-double survL = 0.95-costL; // daily survival rate of larvae
-double survLf_gm = survL; // daily survival rate of GM female larvae
+double survA_rel = survA_wt * survA_rel_perc; 
+double survA_gm = survA_wt * survA_gm_perc; 
+double survL_gm = survL_wt * survL_gm_perc;
 
 // Fecundity caps (log-linear relationship)
 double lambda_max = 14; 
@@ -328,11 +329,11 @@ for (int time1=1; time1<maxtime; time1++){
 		//------------------------------------------------- Larvae -----------------------------------------
 
 		// Calculate number of yesterday's larvae still alive
-		Lm_cohort[time1][cohort] = Lm_cohort[time1-1][cohort] * survL; // larvae alive yesterday * survival rate (males)
-		Lf_cohort[time1][cohort] = Lf_cohort[time1-1][cohort] * survL; 
+		Lm_cohort[time1][cohort] = Lm_cohort[time1-1][cohort] * survL_wt; // larvae alive yesterday * survival rate (males)
+		Lf_cohort[time1][cohort] = Lf_cohort[time1-1][cohort] * survL_wt; 
 
-		Lm_gm_cohort[time1][cohort] = Lm_gm_cohort[time1-1][cohort] * survL;
-		Lf_gm_cohort[time1][cohort] = Lf_gm_cohort[time1-1][cohort] * survLf_gm;
+		Lm_gm_cohort[time1][cohort] = Lm_gm_cohort[time1-1][cohort] * survL_gm;
+		Lf_gm_cohort[time1][cohort] = Lf_gm_cohort[time1-1][cohort] * survL_gm;
 		
 		// Check if today is a hatch date - if yes, calculate number of new larvae hatching today
 		if (time1 == hdate.at(cohort)){
@@ -384,11 +385,11 @@ for (int time1=1; time1<maxtime; time1++){
 			// Calculate number of new larvae hatching today
  			if (time1>tlagh+tlagg+tlagm){ // prevents hatching from happening until enough time has passed for first adults in simulation to lay eggs
 				
-				Lm_cohort[time1][cohort] = sex_ratio 	 * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA, tlagg);
-				Lf_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA, tlagg);	
+				Lm_cohort[time1][cohort] = sex_ratio 	 * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA_wt, tlagg);
+				Lf_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA_wt, tlagg);	
 
-				Lm_gm_cohort[time1][cohort] = sex_ratio 	* lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA, tlagg);	
-				Lf_gm_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA, tlagg);
+				Lm_gm_cohort[time1][cohort] = sex_ratio 	* lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA_gm, tlagg);	
+				Lf_gm_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA_gm, tlagg);
 				
 			}
 
@@ -524,23 +525,23 @@ for (int time1=1; time1<maxtime; time1++){
 	//--------------------------------------------- Adults --------------------------------------------
 
 	// Calculate number of pupae alive today
-	Pm[time1][1] = Pm[time1-1][0] * survA; // move into second pupal day
-	Pf[time1][1] = Pf[time1-1][0] * survA;
+	Pm[time1][1] = Pm[time1-1][0] * survA_wt; // move into second pupal day
+	Pf[time1][1] = Pf[time1-1][0] * survA_wt;
 
-	Pm_gm[time1][1] = Pm_gm[time1-1][0] * survA;
+	Pm_gm[time1][1] = Pm_gm[time1-1][0] * survA_gm;
 
 	// Calculate number of adults alive today
-	Am[time1] = Am[time1-1] * survA;
-	Af[time1] = Af[time1-1] * survA;
+	Am[time1] = Am[time1-1] * survA_wt;
+	Af[time1] = Af[time1-1] * survA_wt;
 
-	Am_gm[time1] 		 = Am_gm[time1-1] 		  * survA;
-	Am_gm_release[time1] = Am_gm_release[time1-1] * survA;
+	Am_gm[time1] 		 = Am_gm[time1-1] 		  * survA_gm;
+	Am_gm_release[time1] = Am_gm_release[time1-1] * survA_rel;
 
 	// Calculate number of pupae graduating into adults today
-	Am[time1] += Pm[time1-1][1] * survA;
-	Af[time1] += Pf[time1-1][1] * survA;
+	Am[time1] += Pm[time1-1][1] * survA_wt;
+	Af[time1] += Pf[time1-1][1] * survA_wt;
 
-	Am_gm[time1] += Pm_gm[time1-1][1] * survA;
+	Am_gm[time1] += Pm_gm[time1-1][1] * survA_gm;
 
 	// Release event
 	for (int r = 0; r < release_period; r++){ // number of releases/weeks
@@ -571,9 +572,9 @@ for (int time1=1; time1<maxtime; time1++){
 	if (time1>=tlagm){ // adult males must be at least 2 days old to be able to mate
     	
 		// Number of adult males ready to mate (male adults alive 2 days ago still alive today)
-		double Am_mate = comp_wt * (Am[time1-tlagm] * pow(survA, tlagm));
-    	double Am_gm_mate = comp_gm * (Am_gm[time1-tlagm] * pow(survA, tlagm));
-    	double Am_gm_release_mate = comp_rel * (Am_gm_release[time1-tlagm] * pow(survA, tlagm));
+		double Am_mate = comp_wt * (Am[time1-tlagm] * pow(survA_wt, tlagm));
+    	double Am_gm_mate = comp_gm * (Am_gm[time1-tlagm] * pow(survA_gm, tlagm));
+    	double Am_gm_release_mate = comp_rel * (Am_gm_release[time1-tlagm] * pow(survA_rel, tlagm));
 
 		// Total males ready to mate
 		double Am_total = Am_mate + Am_gm_mate + Am_gm_release_mate;
@@ -591,13 +592,13 @@ for (int time1=1; time1<maxtime; time1++){
 	}
 
 	// Calculate number of ovipositing females alive today 
-	Af_mated_wt[time1]  = Af_mated_wt[time1-1]  * survA;
-	Af_mated_gm[time1]  = Af_mated_gm[time1-1]  * survA;
-	Af_mated_rel[time1] = Af_mated_rel[time1-1] * survA;
+	Af_mated_wt[time1]  = Af_mated_wt[time1-1]  * survA_wt;
+	Af_mated_gm[time1]  = Af_mated_gm[time1-1]  * survA_wt;
+	Af_mated_rel[time1] = Af_mated_rel[time1-1] * survA_wt;
 
 	// Calculate new adult females ready to lay eggs 
 	if (time1>=tlagm+tlagg) { // adult males need to be ready to mate, then females need to be ready to lay eggs after mating
-		double Af_mate = Af[time1-tlagf] * pow(survA, tlagf); // females ready to mate (i.e. females alive 5 days ago that were still alive the next day)
+		double Af_mate = Af[time1-tlagf] * pow(survA_wt, tlagf); // females ready to mate (i.e. females alive 5 days ago that were still alive the next day)
 		double Af_unmated = Af_mate - Af_mated_wt[time1] - Af_mated_gm[time1] - Af_mated_rel[time1]; // unmated females ready to mate 4 days ago 
 		Af_unmated = max(0.0, Af_unmated);
 
