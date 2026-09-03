@@ -34,6 +34,7 @@ const int maxtime = 2500; // simulation length (days; ~7 years)
 int release_size, release_day, release_period;
 double survA_wt, survA_rel_perc, survA_gm_perc;
 double survL_wt, survL_gm_perc;
+double comp_gm_perc, comp_rel_perc;
 double lambda_intc, lambda_alpha;
 double dt_mean_intc, dt_mean_alpha, dt_mean_exp;
 double dt_std_intc, dt_std_alpha, dt_std_exp;
@@ -171,6 +172,7 @@ Am_gm_release_freq_out.open(Am_gm_release_freq_file);
 // Read in key parameter values in inits file and print to check correctly read
 cin >> survA_wt >> survA_gm_perc >> survA_rel_perc;
 cin >> survL_wt >> survL_gm_perc;
+cin >> comp_gm_perc >> comp_rel_perc;
 cin >> lambda_intc >> lambda_alpha;
 cin >> dt_mean_intc >> dt_mean_alpha >> dt_mean_exp;
 cin >> dt_std_intc >> dt_std_alpha >> dt_std_exp;
@@ -178,10 +180,11 @@ cin >> release_size >> release_day >> release_period;
 
 cout << "Adult daily survival: WT: " << survA_wt << " 2nd-gen: " << survA_gm_perc << " Released: " << survA_rel_perc << endl;
 cout << "Larval daily survival: WT: " << survL_wt << " 2nd-gen: " << survL_gm_perc << endl;
+cout << "Mating competitiveness relative to WT: 2nd-gen: " << comp_gm_perc << " Released: " << comp_rel_perc << endl;
 cout << "Density-dependent parameters:" << endl;
-cout << "Fecundity: " << "lambda_intc: " << lambda_intc << " lambda_alpha: " << lambda_alpha << endl;
-cout << "Development time (mean): " << "dt_mean_intc: " << dt_mean_intc << " dt_mean_alpha: " << dt_mean_alpha << " dt_mean_exp: " << dt_mean_exp << endl;
-cout << "Development time (std): " << "dt_std_intc: " << dt_std_intc << " dt_std_alpha: " << dt_std_alpha << " dt_std_exp: " << dt_std_exp << endl;
+cout << "Fecundity: lambda_intc: " << lambda_intc << " lambda_alpha: " << lambda_alpha << endl;
+cout << "Development time (mean): dt_mean_intc: " << dt_mean_intc << " dt_mean_alpha: " << dt_mean_alpha << " dt_mean_exp: " << dt_mean_exp << endl;
+cout << "Development time (std): dt_std_intc: " << dt_std_intc << " dt_std_alpha: " << dt_std_alpha << " dt_std_exp: " << dt_std_exp << endl;
 cout << "Release size: " << release_size << endl;
 cout << "Release day: " << release_day << endl;
 cout << "Release period: " << release_period << " weeks" <<endl;
@@ -217,8 +220,8 @@ int L_max = 4200; // the larval density above which the above caps on developmen
 
 // Mating competitiveness
 double comp_wt = 1.0;
-double comp_gm = 1.0;
-double comp_rel = 1.0;
+double comp_gm = comp_wt * comp_gm_perc;
+double comp_rel = comp_wt * comp_rel_perc;
 
 // Other
 double sex_ratio = 0.5; 
