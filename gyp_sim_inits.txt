@@ -1,6 +1,8 @@
 cohort_means.txt
 cohort_stds.txt
 lambda.txt
+cohort_means_gm.txt
+cohort_stds_gm.txt
 Lm.txt
 Lf.txt
 Pm_emerg.txt
@@ -30,6 +32,12 @@ Am_gm_release_freq.txt
 0.22
 0.0168
 0.867
+1.0
+1.0
+1.0
+1.0
+1.0
+1.0
 0
 700
 12

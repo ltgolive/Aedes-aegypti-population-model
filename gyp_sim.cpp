@@ -25,7 +25,7 @@ typedef vector<double> Row_Double;
 typedef vector<Row_Double> Matrix_Double;
 
 // Declare functions
-void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& lambda_out, ofstream& Lm_out, ofstream& Lf_out, ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& Am_out, ofstream& Af_out, ofstream& Lm_gm_out, ofstream& Lf_gm_out, ofstream& Pm_gm_emerg_out, ofstream& Am_gm_out, ofstream& Am_gm_release_out, ofstream& Am_freq_out, ofstream& Am_gm_freq_out, ofstream& Am_gm_release_freq_out);
+void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& lambda_out, ofstream& cohort_means_gm_out, ofstream& cohort_stds_gm_out, ofstream& Lm_out, ofstream& Lf_out, ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& Am_out, ofstream& Af_out, ofstream& Lm_gm_out, ofstream& Lf_gm_out, ofstream& Pm_gm_emerg_out, ofstream& Am_gm_out, ofstream& Am_gm_release_out, ofstream& Am_freq_out, ofstream& Am_gm_freq_out, ofstream& Am_gm_release_freq_out);
 double Run_Model(ofstream& lambda_out);
 
 // Declare global variables
@@ -38,9 +38,12 @@ double comp_gm_perc, comp_rel_perc;
 double lambda_intc, lambda_alpha;
 double dt_mean_intc, dt_mean_alpha, dt_mean_exp;
 double dt_std_intc, dt_std_alpha, dt_std_exp;
+double dt_mean_intc_gm_perc, dt_mean_alpha_gm_perc, dt_mean_exp_gm_perc;
+double dt_std_intc_gm_perc, dt_std_alpha_gm_perc, dt_std_exp_gm_perc;
 
 // Declare global data containers
 vector<float> dt_mean(no_cohorts), dt_std(no_cohorts);
+vector<float> dt_mean_gm(no_cohorts), dt_std_gm(no_cohorts); 
 vector<double> Lm(maxtime), Pm_emerg(maxtime), Am(maxtime), Lf(maxtime), Pf_emerg(maxtime), Af(maxtime); // wildtype
 Matrix_Double Pm(maxtime, Row_Double(2)), Pf(maxtime, Row_Double(2)); // wildtype
 vector<double> Lm_gm(maxtime), Pm_gm_emerg(maxtime), Am_gm(maxtime), Am_gm_release(maxtime), Lf_gm(maxtime); // GM
@@ -56,12 +59,13 @@ int main(){
 
 // Declare input and output files
 ofstream cohort_means_out, cohort_stds_out, lambda_out;
+ofstream cohort_means_gm_out, cohort_stds_gm_out;
 ofstream Lm_out, Lf_out, Pm_emerg_out, Pf_emerg_out, Am_out, Af_out;
 ofstream Lm_gm_out, Lf_gm_out, Pm_gm_emerg_out, Am_gm_out, Am_gm_release_out;
 ofstream Am_freq_out, Am_gm_freq_out, Am_gm_release_freq_out;
 
 // Calls function: read_data
-read_data(cohort_means_out, cohort_stds_out, lambda_out, Lm_out, Lf_out, Pm_emerg_out, Pf_emerg_out, Am_out, Af_out, Lm_gm_out, Lf_gm_out, Pm_gm_emerg_out, Am_gm_out, Am_gm_release_out, Am_freq_out, Am_gm_freq_out, Am_gm_release_freq_out);
+read_data(cohort_means_out, cohort_stds_out, lambda_out, cohort_means_gm_out, cohort_stds_gm_out, Lm_out, Lf_out, Pm_emerg_out, Pf_emerg_out, Am_out, Af_out, Lm_gm_out, Lf_gm_out, Pm_gm_emerg_out, Am_gm_out, Am_gm_release_out, Am_freq_out, Am_gm_freq_out, Am_gm_release_freq_out);
 
 // Calls function: Run_Model - calls in output file streams that need to be written to during the simulation rather than after
 Run_Model(lambda_out);
@@ -70,9 +74,13 @@ Run_Model(lambda_out);
 for (int j=0; j<no_cohorts; j++) {
 	cohort_means_out << dt_mean.at(j) << " ";
 	cohort_stds_out << dt_std.at(j) << " ";
+	cohort_means_gm_out << dt_mean_gm.at(j) << " ";
+	cohort_stds_gm_out << dt_std_gm.at(j) << " ";
 }
-cohort_means_out << endl;
-cohort_stds_out << endl;
+cohort_means_gm_out << endl;
+cohort_stds_gm_out << endl;
+cohort_means_gm_out << endl;
+cohort_stds_gm_out  << endl;
 
 // Write daily larval count, pupal emergence and adult count to file
 for (int j=0; j<maxtime; j++) {
@@ -119,7 +127,7 @@ return 0;
 //------------------------------------------- READ DATA function -------------------------------------------
 
 // Call in input and output files
-void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& lambda_out, ofstream& Lm_out, ofstream& Lf_out, ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& Am_out, ofstream& Af_out, ofstream& Lm_gm_out, ofstream& Lf_gm_out, ofstream& Pm_gm_emerg_out, ofstream& Am_gm_out, ofstream& Am_gm_release_out, ofstream& Am_freq_out, ofstream& Am_gm_freq_out, ofstream& Am_gm_release_freq_out){
+void read_data(ofstream& cohort_means_out, ofstream& cohort_stds_out, ofstream& lambda_out, ofstream& cohort_means_gm_out, ofstream& cohort_stds_gm_out, ofstream& Lm_out, ofstream& Lf_out, ofstream& Pm_emerg_out, ofstream& Pf_emerg_out, ofstream& Am_out, ofstream& Af_out, ofstream& Lm_gm_out, ofstream& Lf_gm_out, ofstream& Pm_gm_emerg_out, ofstream& Am_gm_out, ofstream& Am_gm_release_out, ofstream& Am_freq_out, ofstream& Am_gm_freq_out, ofstream& Am_gm_release_freq_out){
 
 // Read in hatch dates
 ifstream hdate_data;
@@ -130,14 +138,16 @@ hdate_data >> hdate.at(i);
 
 // Open input and output files in inits file
 string cohort_means_file, cohort_stds_file, lambda_file;
+string cohort_means_gm_file, cohort_stds_gm_file;
 string Lm_file, Lf_file, Pm_emerg_file, Pf_emerg_file, Am_file, Af_file;
 string Lm_gm_file, Lf_gm_file, Pm_gm_emerg_file, Am_gm_file, Am_gm_release_file;
 string Am_freq_file, Am_gm_freq_file, Am_gm_release_freq_file;
 
-cin >> cohort_means_file >> cohort_stds_file >> lambda_file >> Lm_file >> Lf_file >> Pm_emerg_file >> Pf_emerg_file >> Am_file >> Af_file >> Lm_gm_file >> Lf_gm_file >> Pm_gm_emerg_file >> Am_gm_file >> Am_gm_release_file >> Am_freq_file >> Am_gm_freq_file >> Am_gm_release_freq_file;
+cin >> cohort_means_file >> cohort_stds_file >> lambda_file >> cohort_means_gm_file >> cohort_stds_gm_file >> Lm_file >> Lf_file >> Pm_emerg_file >> Pf_emerg_file >> Am_file >> Af_file >> Lm_gm_file >> Lf_gm_file >> Pm_gm_emerg_file >> Am_gm_file >> Am_gm_release_file >> Am_freq_file >> Am_gm_freq_file >> Am_gm_release_freq_file;
 
 // Print file names to console
 cout << " cohort_means_file " << cohort_means_file << " cohort_stds_file " << cohort_stds_file << " lambda_file " << lambda_file << endl;
+cout << " cohort_means_gm_file " << cohort_means_gm_file << " cohort_stds_gm_file " << cohort_stds_gm_file << endl;
 cout << " Lm_file " << Lm_file << " Lf_file " << Lf_file << " Lm_gm_file " << Lm_gm_file << " Lf_gm_file " << Lf_gm_file << endl;
 cout << " Pm_emerg_file " << Pm_emerg_file << " Pf_emerg_file " << Pf_emerg_file << " Pm_gm_emerg_file " << Pm_gm_emerg_file << endl;
 cout << " Am_file " << Am_file << " Af_file " << Af_file << " Am_gm_file " << Am_gm_file << " Am_gm_release_file " << Am_gm_release_file << endl;
@@ -146,6 +156,8 @@ cout << " Am_freq_file " << Am_freq_file << " Am_gm_freq_file " << Am_gm_freq_fi
 // Output files
 cohort_means_out.open(cohort_means_file); // mean development times per cohort
 cohort_stds_out.open(cohort_stds_file); // standard deviations of development times per cohort
+cohort_means_gm_out.open(cohort_means_gm_file);
+cohort_stds_gm_out.open(cohort_stds_gm_file);
 lambda_out.open(lambda_file); // per-capita female fecundity per cohort
 
 Lm_out.open(Lm_file); // total number of larvae per day     
@@ -176,15 +188,18 @@ cin >> comp_gm_perc >> comp_rel_perc;
 cin >> lambda_intc >> lambda_alpha;
 cin >> dt_mean_intc >> dt_mean_alpha >> dt_mean_exp;
 cin >> dt_std_intc >> dt_std_alpha >> dt_std_exp;
+cin >> dt_mean_intc_gm_perc >> dt_mean_alpha_gm_perc >> dt_mean_exp_gm_perc;
+cin >> dt_std_intc_gm_perc >> dt_std_alpha_gm_perc >> dt_std_exp_gm_perc;
 cin >> release_size >> release_day >> release_period;
 
 cout << "Adult daily survival: WT: " << survA_wt << " 2nd-gen: " << survA_gm_perc << " Released: " << survA_rel_perc << endl;
 cout << "Larval daily survival: WT: " << survL_wt << " 2nd-gen: " << survL_gm_perc << endl;
 cout << "Mating competitiveness relative to WT: 2nd-gen: " << comp_gm_perc << " Released: " << comp_rel_perc << endl;
-cout << "Density-dependent parameters:" << endl;
 cout << "Fecundity: lambda_intc: " << lambda_intc << " lambda_alpha: " << lambda_alpha << endl;
-cout << "Development time (mean): dt_mean_intc: " << dt_mean_intc << " dt_mean_alpha: " << dt_mean_alpha << " dt_mean_exp: " << dt_mean_exp << endl;
-cout << "Development time (std): dt_std_intc: " << dt_std_intc << " dt_std_alpha: " << dt_std_alpha << " dt_std_exp: " << dt_std_exp << endl;
+cout << "Development time (mean) WT: dt_mean_intc: " << dt_mean_intc << " dt_mean_alpha: " << dt_mean_alpha << " dt_mean_exp: " << dt_mean_exp << endl;
+cout << "Development time (std) WT: dt_std_intc: " << dt_std_intc << " dt_std_alpha: " << dt_std_alpha << " dt_std_exp: " << dt_std_exp << endl;
+cout << "Relative development time (mean) GM: dt_mean_intc: " << dt_mean_intc_gm_perc << " dt_mean_alpha: " << dt_mean_alpha_gm_perc << " dt_mean_exp: " << dt_mean_exp_gm_perc << endl;
+cout << "Relative development time (std) GM: dt_std_intc: " << dt_std_intc_gm_perc << " dt_std_alpha: " << dt_std_alpha_gm_perc << " dt_std_exp: " << dt_std_exp_gm_perc << endl;
 cout << "Release size: " << release_size << endl;
 cout << "Release day: " << release_day << endl;
 cout << "Release period: " << release_period << " weeks" <<endl;
@@ -218,6 +233,13 @@ double dt_std_max = 40; // if crowding is extreme, std dev development time is c
 double dt_std_min = 1.0; // if crowding is minimal, std dev development time is capped at ±1 day from mean
 int L_max = 4200; // the larval density above which the above caps on development time kick in
 
+double dt_mean_intc_gm  = dt_mean_intc  * dt_mean_intc_gm_perc;
+double dt_mean_alpha_gm = dt_mean_alpha * dt_mean_alpha_gm_perc;
+double dt_mean_exp_gm   = dt_mean_exp   * dt_mean_exp_gm_perc;
+double dt_std_intc_gm   = dt_std_intc   * dt_std_intc_gm_perc;
+double dt_std_alpha_gm  = dt_std_alpha  * dt_std_alpha_gm_perc;
+double dt_std_exp_gm    = dt_std_exp    * dt_std_exp_gm_perc;
+
 // Mating competitiveness
 double comp_wt = 1.0;
 double comp_gm = comp_wt * comp_gm_perc;
@@ -236,7 +258,8 @@ int start, end;
 double L_cum, L_cum2, denom, L_avg_gam1, P_emerg_cohort; // expected mean & std dev
 int time_lag;
 
-double dt_shp, dt_scl, prob, Pm_emerge_today, Pf_emerge_today, Pm_gm_emerge_today, Pf_gm_emerge_today; // pupal emergence
+double dt_shp, dt_scl, prob, dt_shp_gm, dt_scl_gm, prob_gm; // pupal emergence
+double Pm_emerge_today, Pf_emerge_today, Pm_gm_emerge_today, Pf_gm_emerge_today; 
 
 
 // Create local data containers
@@ -254,11 +277,14 @@ Matrix_Double Pf_gm_emerg_cohort(maxtime, Row_Double(no_cohorts, 0.0));
 
 // By cohort 
 vector<double> non_emerg_prob(no_cohorts, 1.0); // cumulative probability that a larva has not yet emerged as a pupa (1 = 100%; decreases over time)
+vector<double> non_emerg_prob_gm(no_cohorts, 1.0);
 vector<int> emerg_flag(no_cohorts, 0); // flag to track if enough pupae have emerged to start calculating statistics
 vector<double> L_avg_gam(no_cohorts, 0.0); // running average larval density experienced (estimated)
 vector<double> L_avg(no_cohorts, 0.0); // average larval density experienced (final)
 vector<double> dt_mean_gam(no_cohorts, 999.0); // mean larval development time (gamma distribution)
 vector<double> dt_std_gam(no_cohorts, 1.0); // std dev of larval development time (gamma distribution)
+vector<double> dt_mean_gam_gm(no_cohorts, 999.0);
+vector<double> dt_std_gam_gm(no_cohorts, 1.0);
 vector<double> P_emerg(no_cohorts, 0.0); // total number of pupae that emerged
 vector<double> P_gm_emerg(no_cohorts, 0.0);
 vector<double> lambda(no_cohorts, 0.0); // per-capita female fecundity
@@ -269,6 +295,8 @@ vector<double> lambda(no_cohorts, 0.0); // per-capita female fecundity
 for (int i=0; i<no_cohorts; i++){
 	dt_mean.at(i) = 0.0; // mean larval development time (final)
 	dt_std.at(i) = 0.0; // std dev of larval development time (final)
+	dt_mean_gm.at(i) = 0.0;
+    dt_std_gm.at(i)  = 0.0;
 }
 
 // By day
@@ -432,16 +460,22 @@ for (int time1=1; time1<maxtime; time1++){
 			if (denom>0) L_avg_gam1 = L_cum2/denom; // yes - pupae have started emerging
 			else L_avg_gam1 = L_cum/(time1 - hdate.at(cohort)); // no - no pupae have emerged yet (use unweighted)
 
-			// Calculate expected mean of larval development time
+			// Calculate expected mean and std dev of larval development time (wildtype)
 			dt_mean_gam.at(cohort) = dt_mean_intc + dt_mean_alpha * pow(L_avg_gam1, dt_mean_exp); // calculate mean using power-law formula (higher density experienced = longer development time)
 			if (dt_mean_gam.at(cohort)<0) dt_mean_gam.at(cohort)=0; // floor at 0 to avoid nonsensical values
-			
-			// Calculate expected std dev of larval development time
 			dt_std_gam.at(cohort) = dt_std_intc + dt_std_alpha * pow(L_avg_gam1, dt_std_exp); // calculate std dev using power-law formula (higher density experienced = more variable development time)
 			
+			// Calculate expected mean and std dev of larval development time (GM)
+			dt_mean_gam_gm.at(cohort) = dt_mean_intc_gm + dt_mean_alpha_gm * pow(L_avg_gam1, dt_mean_exp_gm);
+    		if (dt_mean_gam_gm.at(cohort)<0) dt_mean_gam_gm.at(cohort)=0;
+    		dt_std_gam_gm.at(cohort) = dt_std_intc_gm + dt_std_alpha_gm * pow(L_avg_gam1, dt_std_exp_gm);
+
 			// Limit mean and std dev to biologically realistic limits
 			if (L_avg_gam1>L_max) {dt_mean_gam.at(cohort) = dt_mean_max; dt_std_gam.at(cohort) = dt_std_max;} // if density exceeded (L_max = 4200) then mean and std dev set to max allowed values
 			if (dt_std_gam.at(cohort) < dt_std_min) dt_std_gam.at(cohort) = dt_std_min; // if std dev is less than minimum (1) then set to minimum
+
+			if (L_avg_gam1>L_max) {dt_mean_gam_gm.at(cohort) = dt_mean_max; dt_std_gam_gm.at(cohort) = dt_std_max;}
+    		if (dt_std_gam_gm.at(cohort) < dt_std_min) dt_std_gam_gm.at(cohort) = dt_std_min;
 
 			// Flag - if ≥2 pupae have emerged, stop updating mean and std dev
 			if (denom>1) {
@@ -454,17 +488,16 @@ for (int time1=1; time1<maxtime; time1++){
 		// Calculate number of larvae emerging as pupae
 		if (time1>hdate.at(cohort)+4){
 
+			// Wildtype
 			// Convert mean and std dev to scale and shape parameters
 			dt_shp = pow(dt_mean_gam.at(cohort)/dt_std_gam.at(cohort),2);
 			dt_scl = dt_mean_gam.at(cohort)/dt_shp;						
 			time_lag = time1 - hdate.at(cohort);
-
 			// Calculate probability of emerging today
 			if (time_lag>5 && dt_mean_gam.at(cohort)>0 && dt_shp>0 && dt_scl>0 && dt_shp<200 && dt_scl<200){				 
 				prob = gsl_cdf_gamma_P(time_lag-5,dt_shp,dt_scl) - gsl_cdf_gamma_P(time_lag-5-1,dt_shp,dt_scl);
 			}
 			else prob=0;
-
 			// Safety checks
 			if (dt_mean_gam.at(cohort)==0){
 				dt_shp = 9.0;
@@ -472,27 +505,45 @@ for (int time1=1; time1<maxtime; time1++){
 				prob = gsl_cdf_gamma_P(time_lag-4,dt_shp,dt_scl) - gsl_cdf_gamma_P(time_lag-4-1,dt_shp,dt_scl);
 			}
 			
+			// GM
+			// Convert mean and std dev to scale and shape parameters
+			dt_shp_gm = pow(dt_mean_gam_gm.at(cohort)/dt_std_gam_gm.at(cohort),2);
+			dt_scl_gm = dt_mean_gam_gm.at(cohort)/dt_shp_gm;						
+			// Calculate probability of emerging today
+			if (time_lag>5 && dt_mean_gam_gm.at(cohort)>0 && dt_shp_gm>0 && dt_scl_gm>0 && dt_shp_gm<200 && dt_scl_gm<200){				 
+				prob_gm = gsl_cdf_gamma_P(time_lag-5,dt_shp_gm,dt_scl_gm) - gsl_cdf_gamma_P(time_lag-5-1,dt_shp_gm,dt_scl_gm);
+			}
+			else prob_gm=0;
+			// Safety checks
+			if (dt_mean_gam_gm.at(cohort)==0){
+				dt_shp_gm = 9.0;
+				dt_scl_gm = 0.2;
+				prob_gm = gsl_cdf_gamma_P(time_lag-4,dt_shp_gm,dt_scl_gm) - gsl_cdf_gamma_P(time_lag-4-1,dt_shp_gm,dt_scl_gm);
+			}
+
 			// Convert probability to numbers
 			Pm_emerge_today = Lm_cohort[time1-1][cohort] * prob/non_emerg_prob.at(cohort);
 			Pf_emerge_today = Lf_cohort[time1-1][cohort] * prob/non_emerg_prob.at(cohort);
-			Pm_gm_emerge_today = Lm_gm_cohort[time1-1][cohort] * prob / non_emerg_prob.at(cohort);
-			Pf_gm_emerge_today = Lf_gm_cohort[time1-1][cohort] * prob / non_emerg_prob.at(cohort);
+			Pm_gm_emerge_today = Lm_gm_cohort[time1-1][cohort] * prob_gm / non_emerg_prob_gm.at(cohort);
+			Pf_gm_emerge_today = Lf_gm_cohort[time1-1][cohort] * prob_gm / non_emerg_prob_gm.at(cohort);
 			
 			// Sanity checks
 			if (Pm_emerge_today > Lm_cohort[time1-1][cohort]){Pm_emerge_today = Lm_cohort[time1-1][cohort]; prob=1;} // prevents more pupae emerging than larvae exist
 			if (Pf_emerge_today > Lf_cohort[time1-1][cohort]){Pf_emerge_today = Lf_cohort[time1-1][cohort]; prob=1;}
-			if (Pm_gm_emerge_today > Lm_gm_cohort[time1-1][cohort]) {Pm_gm_emerge_today = Lm_gm_cohort[time1-1][cohort]; prob=1;}
-			if (Pf_gm_emerge_today > Lf_gm_cohort[time1-1][cohort]) {Pf_gm_emerge_today = Lf_gm_cohort[time1-1][cohort]; prob=1;}
+			if (Pm_gm_emerge_today > Lm_gm_cohort[time1-1][cohort]) {Pm_gm_emerge_today = Lm_gm_cohort[time1-1][cohort]; prob_gm=1;}
+			if (Pf_gm_emerge_today > Lf_gm_cohort[time1-1][cohort]) {Pf_gm_emerge_today = Lf_gm_cohort[time1-1][cohort]; prob_gm=1;}
 			
 			if (Pm_emerge_today<0){Pm_emerge_today=0; prob=0;} // prevents negative emergence
 			if (Pf_emerge_today<0){Pf_emerge_today=0; prob=0;}
-			if (Pm_gm_emerge_today<0){Pm_gm_emerge_today=0; prob=0;}
-			if (Pf_gm_emerge_today<0){Pf_gm_emerge_today=0; prob=0;}
+			if (Pm_gm_emerge_today<0){Pm_gm_emerge_today=0; prob_gm=0;}
+			if (Pf_gm_emerge_today<0){Pf_gm_emerge_today=0; prob_gm=0;}
 			
 			if (prob<0) prob=0; // further prevents negative probability of emergence
+			if (prob_gm<0) prob_gm=0;
 
 			// Updates based on calculations
 			non_emerg_prob.at(cohort) *= (1-prob/non_emerg_prob.at(cohort)); // update probability of not emerging
+			non_emerg_prob_gm.at(cohort) *= (1-prob_gm/non_emerg_prob_gm.at(cohort));
 	
 			Lm_cohort[time1][cohort] -= Pm_emerge_today; // remove emerging larvae from larvae compartment
             Lf_cohort[time1][cohort] -= Pf_emerge_today;
@@ -511,7 +562,8 @@ for (int time1=1; time1<maxtime; time1++){
 			Pf[time1][0] 	+= Pf_emerge_today;
 			Pm_gm[time1][0] += Pm_gm_emerge_today;
 
-			dt_mean.at(cohort) += (time1-hdate.at(cohort)) * (Pm_emerge_today + Pf_emerge_today + Pm_gm_emerge_today); // accumulate mean development time
+			dt_mean.at(cohort)    += (time1-hdate.at(cohort)) * (Pm_emerge_today + Pf_emerge_today);
+			dt_mean_gm.at(cohort) += (time1-hdate.at(cohort)) * Pm_gm_emerge_today; // accumulate mean development time
 
 		} // End loop for calculating number of larvae emerging as pupae
 
@@ -616,16 +668,31 @@ for (int time1=1; time1<maxtime; time1++){
 
 // Calculate observed mean and standard deviation of larval development time for each cohort
 for (int i=0; i<no_cohorts; i++) {
-	if (P_emerg.at(i) + P_gm_emerg.at(i) > 0) dt_mean.at(i) /= (P_emerg.at(i) + P_gm_emerg.at(i)); // mean
-	else dt_mean.at(i)=0;
-	for (int j=0; j<maxtime; j++) { // accumulate squared deviations
-		if (j>hdate.at(i)+4){
-			P_emerg_cohort = Pf_emerg_cohort[j][i] + Pm_emerg_cohort[j][i] + Pm_gm_emerg_cohort[j][i];
-			dt_std.at(i) +=(j-hdate.at(i)-dt_mean.at(i))*(j-hdate.at(i)-dt_mean.at(i))*P_emerg_cohort;
-		}
-   	}
-	if (P_emerg.at(i) + P_gm_emerg.at(i) > 0) dt_std.at(i) = sqrt(dt_std.at(i) / (P_emerg.at(i) + P_gm_emerg.at(i))); // std dev
-	else dt_std.at(i)=0;
+
+    // Mean
+    if (P_emerg.at(i) > 0) dt_mean.at(i) /= P_emerg.at(i); // WT
+    else dt_mean.at(i) = 0;
+    if (P_gm_emerg.at(i) > 0) dt_mean_gm.at(i) /= P_gm_emerg.at(i); // GM
+    else dt_mean_gm.at(i) = 0;
+
+    // Standard deviation
+    for (int j=0; j<maxtime; j++) { // WT
+        if (j>hdate.at(i)+4){
+            P_emerg_cohort = Pf_emerg_cohort[j][i] + Pm_emerg_cohort[j][i];
+            dt_std.at(i) += (j-hdate.at(i)-dt_mean.at(i)) * (j-hdate.at(i)-dt_mean.at(i)) * P_emerg_cohort;
+        }
+    }
+    if (P_emerg.at(i) > 0) dt_std.at(i) = sqrt(dt_std.at(i) / P_emerg.at(i));
+    else dt_std.at(i) = 0;
+
+    for (int j=0; j<maxtime; j++) { // GM
+        if (j>hdate.at(i)+4){
+            P_emerg_cohort = Pm_gm_emerg_cohort[j][i];
+            dt_std_gm.at(i) += (j-hdate.at(i)-dt_mean_gm.at(i)) * (j-hdate.at(i)-dt_mean_gm.at(i)) * P_emerg_cohort;
+        }
+    }
+    if (P_gm_emerg.at(i) > 0) dt_std_gm.at(i) = sqrt(dt_std_gm.at(i) / P_gm_emerg.at(i));
+    else dt_std_gm.at(i) = 0;
 }
 
 // Calculate total number of pupae that emerged each day
