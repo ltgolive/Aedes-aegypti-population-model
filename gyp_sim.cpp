@@ -32,8 +32,8 @@ double Run_Model(ofstream& lambda_out);
 const int no_cohorts = 1000; // number of mosquito cohorts
 const int maxtime = 2500; // simulation length (days; ~7 years)
 int release_size, release_day, release_period;
-double survA_wt, survA_rel_perc, survA_gm_perc;
-double survL_wt, survL_gm_perc;
+double survA_wt, survA_rel, survA_gm;
+double survL_wt, survL_gm;
 double comp_gm_perc, comp_rel_perc;
 double lambda_intc, lambda_alpha;
 double dt_mean_intc, dt_mean_alpha, dt_mean_exp;
@@ -182,8 +182,8 @@ Am_gm_freq_out.open(Am_gm_freq_file);
 Am_gm_release_freq_out.open(Am_gm_release_freq_file);
 
 // Read in key parameter values in inits file and print to check correctly read
-cin >> survA_wt >> survA_gm_perc >> survA_rel_perc;
-cin >> survL_wt >> survL_gm_perc;
+cin >> survA_wt >> survA_gm >> survA_rel;
+cin >> survL_wt >> survL_gm;
 cin >> comp_gm_perc >> comp_rel_perc;
 cin >> lambda_intc >> lambda_alpha;
 cin >> dt_mean_intc >> dt_mean_alpha >> dt_mean_exp;
@@ -192,8 +192,8 @@ cin >> dt_mean_intc_gm_perc >> dt_mean_alpha_gm_perc >> dt_mean_exp_gm_perc;
 cin >> dt_std_intc_gm_perc >> dt_std_alpha_gm_perc >> dt_std_exp_gm_perc;
 cin >> release_size >> release_day >> release_period;
 
-cout << "Adult daily survival: WT: " << survA_wt << " 2nd-gen: " << survA_gm_perc << " Released: " << survA_rel_perc << endl;
-cout << "Larval daily survival: WT: " << survL_wt << " 2nd-gen: " << survL_gm_perc << endl;
+cout << "Adult daily survival: WT: " << survA_wt << " 2nd-gen: " << survA_gm << " Released: " << survA_rel << endl;
+cout << "Larval daily survival: WT: " << survL_wt << " 2nd-gen: " << survL_gm << endl;
 cout << "Mating competitiveness relative to WT: 2nd-gen: " << comp_gm_perc << " Released: " << comp_rel_perc << endl;
 cout << "Fecundity: lambda_intc: " << lambda_intc << " lambda_alpha: " << lambda_alpha << endl;
 cout << "Development time (mean) WT: dt_mean_intc: " << dt_mean_intc << " dt_mean_alpha: " << dt_mean_alpha << " dt_mean_exp: " << dt_mean_exp << endl;
@@ -215,13 +215,8 @@ int tlagh = 5; // oviposition to egg hatching
 int tlagl = 21; // time over which larval density is averaged
 int tlagp = 2; // pupal development time
 int tlagg = 4; // mating to oviposition
-int tlagm = 2; // emerging as adults and being ready to mate (males)
-int tlagf = 1; // emerging as adults and being ready to mate (females)
-
-// Mortality
-double survA_rel = survA_wt * survA_rel_perc; 
-double survA_gm = survA_wt * survA_gm_perc; 
-double survL_gm = survL_wt * survL_gm_perc;
+int tlagm = 1; // emerging as adults and being ready to mate (males)
+int tlagf = 2; // emerging as adults and being ready to mate (females)
 
 // Fecundity caps (log-linear relationship)
 double lambda_max = 14; 
@@ -652,7 +647,7 @@ for (int time1=1; time1<maxtime; time1++){
 	Af_mated_rel[time1] = Af_mated_rel[time1-1] * survA_wt;
 
 	// Calculate new adult females ready to lay eggs 
-	if (time1>=tlagm+tlagg) { // adult males need to be ready to mate, then females need to be ready to lay eggs after mating
+	if (time1>=tlagf+tlagg) { // adult females need to be ready to mate, then females need to be ready to lay eggs after mating
 		double Af_mate = Af[time1-tlagf] * pow(survA_wt, tlagf); // females ready to mate (i.e. females alive 5 days ago that were still alive the next day)
 		double Af_unmated = Af_mate - Af_mated_wt[time1] - Af_mated_gm[time1] - Af_mated_rel[time1]; // unmated females ready to mate 4 days ago 
 		Af_unmated = max(0.0, Af_unmated);
