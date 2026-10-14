@@ -409,13 +409,13 @@ for (int time1=1; time1<maxtime; time1++){
 			lambda.at(cohort) = lambda1;
 
 			// Calculate number of new larvae hatching today
- 			if (time1>tlagh+tlagg+tlagm){ // prevents hatching from happening until enough time has passed for first adults in simulation to lay eggs
+ 			if (time1>tlagh+tlagg+tlagf){ // prevents hatching from happening until enough time has passed for first adults in simulation to lay eggs
 				
 				Lm_cohort[time1][cohort] = sex_ratio 	 * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA_wt, tlagg);
 				Lf_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_wt.at(time1-tlagh-tlagg) * pow(survA_wt, tlagg);	
 
-				Lm_gm_cohort[time1][cohort] = sex_ratio 	* lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA_gm, tlagg);	
-				Lf_gm_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA_gm, tlagg);
+				Lm_gm_cohort[time1][cohort] = sex_ratio 	* lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA_wt, tlagg);	
+				Lf_gm_cohort[time1][cohort] = (1-sex_ratio) * lambda1 * Af_mated_rel.at(time1-tlagh-tlagg) * pow(survA_wt, tlagg);
 				
 			}
 

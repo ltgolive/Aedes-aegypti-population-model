@@ -18,12 +18,12 @@ Am_freq.txt
 Am_gm_freq.txt
 Am_gm_release_freq.txt
 0.90
-1.0
-1.0
+0.90
+0.60
+0.94
 0.94
 1.0
-1.0
-1.0
+0.5
 28.0
 -3.3
 1.8
@@ -40,4 +40,4 @@ Am_gm_release_freq.txt
 1.0
 0
 700
-12
+20
